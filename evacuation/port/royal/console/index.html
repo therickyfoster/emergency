@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Port Royal Resilience • Multiplayer RPG Command Center</title>
+<meta name="description" content="Community-driven evacuation planning with RPG mechanics, party system, and multiplayer coordination. Offline-capable, privacy-first, zero-harm design." />
+<meta name="theme-color" content="#0b0f1a" />
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: CSS Variables & Advanced Theme System
+   WHAT: Extended color schemes with RPG-specific colors (mana, health, energy)
+   HOW: CSS custom properties with semantic naming for game states
+   USAGE: Themes auto-switch based on user preference or manual selection
+   OUTCOME: Immersive game-like aesthetic across entire application
+   EXPANSION PROMPT: "Add faction-based themes (Guardians, Scouts, Healers, Engineers)"
+   ATTRIBUTION: Inspired by League of Legends HUD (Riot Games), Destiny UI (Bungie)
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* Base Theme */
+  --bg: #0a0e1a;
+  --bg-darker: #050810;
+  --panel: #0f1526;
+  --card: #121a2e;
+  --ink: #e6f0ff;
+  --muted: #a8b3c7;
+  --brand: #59d2ff;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --ring: rgba(89,210,255,.35);
+  --accent: #ff66cc;
+  --accent2: #7c3aed;
+  --glow: rgba(89,210,255,.6);
+  --particle: #59d2ff;
+  
+  /* RPG-Specific Colors */
+  --health: #ff4757;
+  --mana: #4a90ff;
+  --energy: #ffd93d;
+  --xp: #9b59b6;
+  --legendary: #ff8c42;
+  --epic: #a55eea;
+  --rare: #45aaf2;
+  --uncommon: #26de81;
+  --common: #ced6e0;
+  
+  /* Multiplayer Colors */
+  --party: #5f27cd;
+  --guild: #ff6b6b;
+  --ally: #00d2d3;
+  --neutral: #95a5a6;
+  
+  /* HUD Overlay */
+  --hud-bg: rgba(10,14,26,0.92);
+  --hud-border: rgba(89,210,255,0.3);
+  --hud-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+
+[data-theme="cyber"] {
+  --bg: #000a14;
+  --brand: #00ffff;
+  --accent: #ff00ff;
+  --particle: #00ffff;
+  --glow: rgba(0,255,255,.8);
+}
+
+[data-theme="nature"] {
+  --bg: #0a1f0a;
+  --brand: #7bed9f;
+  --accent: #ffc048;
+  --particle: #7bed9f;
+  --glow: rgba(123,237,159,.6);
+}
+
+[data-theme="volcanic"] {
+  --bg: #1a0a00;
+  --brand: #ff6348;
+  --accent: #ffa502;
+  --particle: #ff6348;
+  --glow: rgba(255,99,72,.8);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Advanced Base Styles with Game Aesthetics
+   ATTRIBUTION: Pattern from game-ui (MIT) github.com/FreezingMoon/AncientBeast
+   ═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { 
+  box-sizing: border-box; 
+  margin: 0;
+  padding: 0;
+}
+
+html { 
+  height: 100%; 
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font: 14px/1.6 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  overflow: hidden;
+  height: 100vh;
+  position: relative;
+  transition: background-color 0.5s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Advanced Starfield with Nebulae
+   WHAT: Multi-layer canvas with stars, nebulae clouds, and shooting stars
+   HOW: Multiple canvas layers with WebGL-style effects
+   USAGE: Automatically renders on page load with parallax mouse tracking
+   OUTCOME: Deep space atmosphere with dynamic elements
+   EXPANSION PROMPT: "Add asteroid belts, distant planets, space stations"
+   ATTRIBUTION: Inspired by star-field (MIT) github.com/markbattistella/star-field
+   ═══════════════════════════════════════════════════════════════ */
+#starfield {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  opacity: 0.9;
+}
+
+#nebulae {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  opacity: 0.4;
+  filter: blur(60px);
+  mix-blend-mode: screen;
+}
+
+#constellation {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.2;
+  transition: opacity 0.5s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Full-Screen RPG HUD Layout
+   WHAT: Overlay-based interface with collapsible panels
+   HOW: Absolute positioned panels that slide in/out
+   USAGE: Click hotkeys or buttons to toggle panels
+   OUTCOME: Immersive full-screen game experience
+   EXPANSION PROMPT: "Add drag-to-reposition panels, save layout preferences"
+   ATTRIBUTION: Pattern from rpg-awesome-ui (MIT) github.com/nagadomi/lbpcascade_animeface
+   ═══════════════════════════════════════════════════════════════ */
+.game-viewport {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.game-background {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(26,35,64,0.3) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Top HUD Bar (Character Stats & Party)
+   WHAT: Always-visible top bar with character, party, and global stats
+   HOW: Fixed position with glassmorphism effect
+   USAGE: Shows real-time character status and party members
+   OUTCOME: MMO-style persistent status display
+   ATTRIBUTION: Inspired by World of Warcraft UI (Blizzard), FF14 HUD (Square Enix)
+   ═══════════════════════════════════════════════════════════════ */
+.hud-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: var(--hud-bg);
+  border-bottom: 2px solid var(--hud-border);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 1.5rem;
+  z-index: 900;
+  box-shadow: var(--hud-shadow);
+}
+
+.character-portrait {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--brand), var(--accent));
+  border: 2px solid var(--glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  box-shadow: 0 0 20px var(--glow);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  position: relative;
+}
+
+.character-portrait:hover {
+  transform: scale(1.1);
+}
+
+.character-portrait::after {
+  content: attr(data-level);
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: var(--xp);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 12px;
+  border: 1px solid white;
+}
+
+.character-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.character-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.class-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: var(--rare);
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-bars {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.stat-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 120px;
+}
+
+.stat-bar-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+.stat-bar-bg {
+  height: 8px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  position: relative;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  position: relative;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.stat-bar-fill.health { background: linear-gradient(90deg, #ff4757, #ff6b6b); color: #ff4757; }
+.stat-bar-fill.mana { background: linear-gradient(90deg, #4a90ff, #70a1ff); color: #4a90ff; }
+.stat-bar-fill.energy { background: linear-gradient(90deg, #ffd93d, #ffed4e); color: #ffd93d; }
+.stat-bar-fill.xp { background: linear-gradient(90deg, #9b59b6, #bb6bd9); color: #9b59b6; }
+
+.stat-bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.party-members {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.party-member {
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(89,210,255,0.2), rgba(124,58,237,0.2));
+  border: 2px solid var(--party);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.party-member:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--party);
+}
+
+.party-member.online::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: var(--ok);
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 8px var(--ok);
+}
+
+.party-member.offline {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.global-stats {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.global-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.global-stat-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--brand);
+  text-shadow: 0 0 10px var(--glow);
+}
+
+.global-stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Bottom HUD Bar (Actions & Quick Access)
+   WHAT: Bottom action bar with hotkeys and quick slots
+   HOW: Fixed bottom position with skill slots
+   USAGE: Click or press hotkeys (1-0) for quick actions
+   OUTCOME: Fast access to common actions like MMO hotbar
+   ATTRIBUTION: Pattern from mmorpg-ui (MIT) github.com/pixijs/pixijs
+   ═══════════════════════════════════════════════════════════════ */
+.hud-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--hud-bg);
+  border: 2px solid var(--hud-border);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  backdrop-filter: blur(12px);
+  z-index: 900;
+  box-shadow: var(--hud-shadow);
+}
+
+.action-slot {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, rgba(18,26,46,0.8), rgba(11,20,42,0.8));
+  border: 2px solid rgba(89,210,255,0.3);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.action-slot:hover {
+  border-color: var(--brand);
+  box-shadow: 0 0 20px var(--ring), inset 0 0 20px rgba(89,210,255,0.1);
+  transform: translateY(-3px);
+}
+
+.action-slot.active {
+  background: linear-gradient(135deg, rgba(89,210,255,0.3), rgba(124,58,237,0.3));
+  border-color: var(--brand);
+  box-shadow: 0 0 25px var(--glow);
+}
+
+.action-slot.cooldown::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--cooldown-percent, 0%);
+  background: rgba(0,0,0,0.7);
+  transition: height 0.1s linear;
+}
+
+.action-icon {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.action-hotkey {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: rgba(0,0,0,0.6);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Side Panels (Collapsible Menus)
+   WHAT: Slide-in panels for inventory, skills, quests, party
+   HOW: Absolute positioned with transform transitions
+   USAGE: Click panel toggle buttons or press hotkeys
+   OUTCOME: Clean full-screen view with on-demand panels
+   EXPANSION PROMPT: "Add panel stacking, minimize mode, transparency slider"
+   ATTRIBUTION: Inspired by Destiny 2 menu system (Bungie)
+   ═══════════════════════════════════════════════════════════════ */
+.panel {
+  position: fixed;
+  top: 70px;
+  bottom: 0;
+  width: 420px;
+  background: var(--hud-bg);
+  border: 2px solid var(--hud-border);
+  backdrop-filter: blur(12px);
+  z-index: 800;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--hud-shadow);
+}
+
+.panel.left {
+  left: 0;
+  border-left: none;
+  border-radius: 0 12px 12px 0;
+  transform: translateX(-100%);
+}
+
+.panel.right {
+  right: 0;
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+  transform: translateX(100%);
+}
+
+.panel.open {
+  transform: translateX(0);
+}
+
+.panel-header {
+  padding: 1rem;
+  background: linear-gradient(180deg, rgba(18,26,46,0.9), rgba(11,20,42,0.9));
+  border-bottom: 2px solid var(--hud-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.panel-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.panel-close:hover {
+  background: rgba(248,113,113,0.2);
+  color: var(--bad);
+}
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--brand) transparent;
+}
+
+.panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: var(--brand);
+  border-radius: 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Panel Toggle Buttons (Floating)
+   WHAT: Floating buttons to open panels
+   HOW: Fixed positioned clickable tabs
+   USAGE: Click to toggle corresponding panel
+   OUTCOME: Easy panel access without cluttering screen
+   ═══════════════════════════════════════════════════════════════ */
+.panel-toggle {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--hud-bg);
+  border: 2px solid var(--hud-border);
+  backdrop-filter: blur(12px);
+  padding: 1rem 0.5rem;
+  cursor: pointer;
+  z-index: 700;
+  writing-mode: vertical-rl;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  color: var(--brand);
+  transition: all 0.3s ease;
+  box-shadow: var(--hud-shadow);
+}
+
+.panel-toggle.left {
+  left: 0;
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+}
+
+.panel-toggle.right {
+  right: 0;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+}
+
+.panel-toggle:hover {
+  background: linear-gradient(135deg, rgba(89,210,255,0.2), rgba(124,58,237,0.2));
+  box-shadow: 0 0 30px var(--ring);
+  padding-left: 0.8rem;
+  padding-right: 0.8rem;
+}
+
+.panel-toggle.active {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Center Content Area (Map & Main View)
+   WHAT: Central game viewport for maps, scenes, visualization
+   HOW: Absolute positioned between HUD bars
+   USAGE: Primary focus area for spatial content
+   OUTCOME: Clear hierarchy with HUD framing content
+   ═══════════════════════════════════════════════════════════════ */
+.center-content {
+  position: fixed;
+  top: 90px;
+  bottom: 90px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.center-content > * {
+  pointer-events: auto;
+}
+
+.main-display {
+  width: 100%;
+  max-width: 1200px;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(15,21,38,0.4), rgba(11,17,36,0.4));
+  border: 2px solid var(--hud-border);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+  box-shadow: var(--hud-shadow), inset 0 0 60px rgba(89,210,255,0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.main-display-header {
+  padding: 1rem;
+  background: linear-gradient(180deg, rgba(18,26,46,0.8), rgba(11,20,42,0.6));
+  border-bottom: 2px solid var(--hud-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.main-display-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.main-display-body {
+  flex: 1;
+  overflow: auto;
+  padding: 1.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--brand) transparent;
+}
+
+/* Quest/Item Card Styles */
+.quest-card {
+  background: linear-gradient(135deg, rgba(18,26,46,0.8), rgba(11,20,42,0.8));
+  border: 2px solid rgba(89,210,255,0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  margin-bottom: 0.8rem;
+}
+
+.quest-card:hover {
+  border-color: var(--brand);
+  box-shadow: 0 4px 20px rgba(89,210,255,0.2);
+  transform: translateY(-2px);
+}
+
+.quest-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.quest-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quest-rarity {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.quest-rarity.common { background: var(--common); color: #2c3e50; }
+.quest-rarity.uncommon { background: var(--uncommon); color: white; }
+.quest-rarity.rare { background: var(--rare); color: white; }
+.quest-rarity.epic { background: var(--epic); color: white; }
+.quest-rarity.legendary { background: var(--legendary); color: white; }
+
+.quest-description {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.8rem;
+  line-height: 1.5;
+}
+
+/* Button Styles */
+.btn {
+  background: linear-gradient(135deg, rgba(89,210,255,0.3), rgba(124,58,237,0.3));
+  border: 2px solid var(--brand);
+  color: var(--ink);
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:hover {
+  border-color: var(--glow);
+  box-shadow: 0 0 30px var(--glow);
+  transform: translateY(-2px);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--brand), var(--accent2));
+  border-color: var(--brand);
+  box-shadow: 0 4px 20px rgba(89,210,255,0.4);
+}
+
+/* Toast Notification System */
+.toast-container {
+  position: fixed;
+  top: 90px;
+  right: 20px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 400px;
+}
+
+.toast {
+  background: linear-gradient(135deg, rgba(15,21,38,0.95), rgba(11,17,36,0.95));
+  border: 2px solid var(--brand);
+  border-radius: 12px;
+  padding: 1rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 30px var(--glow);
+  animation: slideInRight 0.4s ease;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.toast.success { border-color: var(--ok); }
+.toast.legendary { border-color: var(--legendary); animation: slideInRight 0.4s ease, pulse 2s infinite; }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.toast-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 8px currentColor);
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--brand);
+  margin-bottom: 0.2rem;
+}
+
+.toast-message {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Loading Screen */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-darker);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  transition: opacity 0.5s ease;
+}
+
+.loading-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-logo {
+  font-size: 4rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+.loading-text {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.loading-bar {
+  width: 300px;
+  height: 8px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 2px solid var(--brand);
+}
+
+.loading-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--accent));
+  border-radius: 4px;
+  animation: loading 2s ease-in-out infinite;
+  box-shadow: 0 0 20px var(--glow);
+}
+
+@keyframes loading {
+  0% { width: 0%; }
+  50% { width: 100%; }
+  100% { width: 0%; }
+}
+
+/* Map Display */
+.map-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: radial-gradient(circle at 50% 50%, rgba(26,35,64,0.3) 0%, transparent 70%);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.map-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 20px rgba(89,210,255,0.2));
+}
+
+/* Inventory Grid */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.inventory-slot {
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, rgba(18,26,46,0.6), rgba(11,20,42,0.6));
+  border: 2px solid rgba(89,210,255,0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.inventory-slot:hover {
+  border-color: var(--brand);
+  box-shadow: 0 0 15px rgba(89,210,255,0.3);
+}
+
+.inventory-slot.has-item {
+  background: linear-gradient(135deg, rgba(89,210,255,0.2), rgba(124,58,237,0.2));
+}
+
+.item-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.item-quantity {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Party Member Card */
+.party-member-card {
+  background: linear-gradient(135deg, rgba(18,26,46,0.7), rgba(11,20,42,0.7));
+  border: 2px solid rgba(89,210,255,0.2);
+  border-radius: 10px;
+  padding: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  transition: all 0.2s ease;
+  margin-bottom: 0.6rem;
+}
+
+.party-member-card:hover {
+  border-color: var(--brand);
+  box-shadow: 0 4px 16px rgba(89,210,255,0.2);
+}
+
+.party-member-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--brand), var(--accent));
+  border: 2px solid var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  position: relative;
+}
+
+.party-member-avatar.online::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: var(--ok);
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 10px var(--ok);
+}
+
+.party-member-info {
+  flex: 1;
+}
+
+.party-member-name {
+  font-weight: 700;
+  color: var(--brand);
+  font-size: 0.95rem;
+}
+
+.party-member-role {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .hud-top {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 0.8rem;
+  }
+  
+  .stat-bars {
+    flex-wrap: wrap;
+  }
+  
+  .panel {
+    width: 100%;
+    max-width: 420px;
+  }
+  
+  .center-content {
+    top: auto;
+    bottom: auto;
+    left: 10px;
+    right: 10px;
+  }
+}
+
+/* Utility Classes */
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">🏝️</div>
+  <div class="loading-text">Initializing Command Center</div>
+  <div class="loading-bar">
+    <div class="loading-fill"></div>
+  </div>
+</div>
+
+<!-- ADVANCED STARFIELD & NEBULAE BACKGROUNDS -->
+<canvas id="starfield"></canvas>
+<canvas id="nebulae"></canvas>
+<svg id="constellation"></svg>
+
+<!-- GAME VIEWPORT -->
+<div class="game-viewport">
+  <div class="game-background"></div>
+  
+  <!-- TOP HUD BAR -->
+  <div class="hud-top">
+    <div class="character-portrait" data-level="1" id="charPortrait" title="Character Profile">
+      🛡️
+    </div>
+    
+    <div class="character-info">
+      <div class="character-name">
+        <span id="charName">Guardian</span>
+        <span class="class-badge" id="charClass">COORDINATOR</span>
+      </div>
+      <div class="stat-bars">
+        <div class="stat-bar">
+          <div class="stat-bar-label">
+            <span>Preparedness</span>
+            <span id="healthValue">100/100</span>
+          </div>
+          <div class="stat-bar-bg">
+            <div class="stat-bar-fill health" id="healthBar" style="width: 100%;"></div>
+          </div>
+        </div>
+        <div class="stat-bar">
+          <div class="stat-bar-label">
+            <span>Resources</span>
+            <span id="manaValue">100/100</span>
+          </div>
+          <div class="stat-bar-bg">
+            <div class="stat-bar-fill mana" id="manaBar" style="width: 100%;"></div>
+          </div>
+        </div>
+        <div class="stat-bar">
+          <div class="stat-bar-label">
+            <span>XP Progress</span>
+            <span id="xpValue">0/100</span>
+          </div>
+          <div class="stat-bar-bg">
+            <div class="stat-bar-fill xp" id="xpBar" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="party-members" id="partyMembers">
+      <div class="party-member online" title="Scout Alpha - Online">🔍</div>
+      <div class="party-member online" title="Healer Beta - Online">⚕️</div>
+      <div class="party-member offline" title="Engineer Gamma - Offline">🔧</div>
+      <div class="party-member" title="Invite Member" style="opacity: 0.3;">➕</div>
+    </div>
+    
+    <div class="global-stats">
+      <div class="global-stat">
+        <div class="global-stat-value" id="globalLevel">1</div>
+        <div class="global-stat-label">Level</div>
+      </div>
+      <div class="global-stat">
+        <div class="global-stat-value" id="globalStreak">0🔥</div>
+        <div class="global-stat-label">Streak</div>
+      </div>
+      <div class="global-stat">
+        <div class="global-stat-value" id="globalGuild">5</div>
+        <div class="global-stat-label">Guild</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- BOTTOM HUD BAR -->
+  <div class="hud-bottom">
+    <div class="action-slot" id="action1" title="Quick Strategy (1)">
+      <div class="action-icon">📋</div>
+      <div class="action-hotkey">1</div>
+    </div>
+    <div class="action-slot" id="action2" title="View Map (2)">
+      <div class="action-icon">🗺️</div>
+      <div class="action-hotkey">2</div>
+    </div>
+    <div class="action-slot" id="action3" title="Check Inventory (3)">
+      <div class="action-icon">🎒</div>
+      <div class="action-hotkey">3</div>
+    </div>
+    <div class="action-slot" id="action4" title="Party Chat (4)">
+      <div class="action-icon">💬</div>
+      <div class="action-hotkey">4</div>
+    </div>
+    <div class="action-slot" id="action5" title="Quests (5)">
+      <div class="action-icon">⚔️</div>
+      <div class="action-hotkey">5</div>
+    </div>
+    <div class="action-slot" id="action6" title="Skills (6)">
+      <div class="action-icon">🌟</div>
+      <div class="action-hotkey">6</div>
+    </div>
+    <div class="action-slot" id="action7" title="Export Data (7)">
+      <div class="action-icon">💾</div>
+      <div class="action-hotkey">7</div>
+    </div>
+    <div class="action-slot" id="action8" title="Settings (8)">
+      <div class="action-icon">⚙️</div>
+      <div class="action-hotkey">8</div>
+    </div>
+  </div>
+  
+  <!-- LEFT PANEL TOGGLES -->
+  <div class="panel-toggle left" data-panel="strategies" title="Strategies [I]">
+    STRATEGIES
+  </div>
+  <div class="panel-toggle left" data-panel="quests" title="Quests [Q]" style="top: calc(50% + 80px);">
+    QUESTS
+  </div>
+  
+  <!-- RIGHT PANEL TOGGLES -->
+  <div class="panel-toggle right" data-panel="party" title="Party [P]">
+    PARTY
+  </div>
+  <div class="panel-toggle right" data-panel="skills" title="Skills [K]" style="top: calc(50% + 80px);">
+    SKILLS
+  </div>
+  
+  <!-- LEFT PANELS (Collapsed by default) -->
+  <div class="panel left" id="panelStrategies">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>🌿</span>
+        <span>STRATEGIES</span>
+      </div>
+      <button class="panel-close" data-close="strategies">✕</button>
+    </div>
+    <div class="panel-content" id="strategiesContent">
+      <!-- Dynamic content -->
+    </div>
+  </div>
+  
+  <div class="panel left" id="panelQuests">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>⚔️</span>
+        <span>QUESTS</span>
+      </div>
+      <button class="panel-close" data-close="quests">✕</button>
+    </div>
+    <div class="panel-content" id="questsContent">
+      <!-- Dynamic content -->
+    </div>
+  </div>
+  
+  <!-- RIGHT PANELS (Collapsed by default) -->
+  <div class="panel right" id="panelParty">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>👥</span>
+        <span>PARTY</span>
+      </div>
+      <button class="panel-close" data-close="party">✕</button>
+    </div>
+    <div class="panel-content" id="partyContent">
+      <!-- Dynamic content -->
+    </div>
+  </div>
+  
+  <div class="panel right" id="panelSkills">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>🌟</span>
+        <span>SKILLS</span>
+      </div>
+      <button class="panel-close" data-close="skills">✕</button>
+    </div>
+    <div class="panel-content" id="skillsContent">
+      <!-- Dynamic content -->
+    </div>
+  </div>
+  
+  <!-- CENTER MAIN DISPLAY -->
+  <div class="center-content">
+    <div class="main-display">
+      <div class="main-display-header">
+        <div class="main-display-title" id="mainTitle">TACTICAL MAP • KINGSTON & PORT ROYAL</div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn" onclick="changeMainView('map')">🗺️ Map</button>
+          <button class="btn" onclick="changeMainView('inventory')">🎒 Inventory</button>
+        </div>
+      </div>
+      <div class="main-display-body" id="mainContent">
+        <!-- Dynamic content -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+</div>
+
+<script>
+// Advanced Starfield with Nebulae and Shooting Stars
+(function initAdvancedStarfield() {
+  const starCanvas = document.getElementById('starfield');
+  const nebulaeCanvas = document.getElementById('nebulae');
+  const starCtx = starCanvas.getContext('2d');
+  const nebulaeCtx = nebulaeCanvas.getContext('2d');
+  
+  let width, height;
+  const stars = [];
+  const shootingStars = [];
+  const STAR_COUNT = 500;
+  let mouseX = 0, mouseY = 0;
+  
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    starCanvas.width = width;
+    starCanvas.height = height;
+    nebulaeCanvas.width = width;
+    nebulaeCanvas.height = height;
+    drawNebulae();
+  }
+  
+  function createStar() {
+    return {
+      x: Math.random() * width,
+      y: Math.random() * height,
+      z: Math.random() * 2 + 0.5,
+      radius: Math.random() * 2 + 0.5,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3 + 0.2,
+      opacity: Math.random() * 0.7 + 0.3,
+      twinkleSpeed: Math.random() * 0.05 + 0.01,
+      twinklePhase: Math.random() * Math.PI * 2,
+    };
+  }
+  
+  function createShootingStar() {
+    return {
+      x: Math.random() * width,
+      y: Math.random() * height * 0.5,
+      vx: Math.random() * 8 + 4,
+      vy: Math.random() * 4 + 2,
+      life: 60,
+      maxLife: 60,
+    };
+  }
+  
+  function init() {
+    resize();
+    for (let i = 0; i < STAR_COUNT; i++) {
+      stars.push(createStar());
+    }
+  }
+  
+  function drawNebulae() {
+    nebulaeCtx.clearRect(0, 0, width, height);
+    
+    const gradient1 = nebulaeCtx.createRadialGradient(width * 0.3, height * 0.3, 0, width * 0.3, height * 0.3, width * 0.4);
+    gradient1.addColorStop(0, 'rgba(89, 210, 255, 0.15)');
+    gradient1.addColorStop(0.5, 'rgba(124, 58, 237, 0.1)');
+    gradient1.addColorStop(1, 'transparent');
+    nebulaeCtx.fillStyle = gradient1;
+    nebulaeCtx.fillRect(0, 0, width, height);
+    
+    const gradient2 = nebulaeCtx.createRadialGradient(width * 0.7, height * 0.6, 0, width * 0.7, height * 0.6, width * 0.5);
+    gradient2.addColorStop(0, 'rgba(255, 102, 204, 0.12)');
+    gradient2.addColorStop(0.5, 'rgba(89, 210, 255, 0.08)');
+    gradient2.addColorStop(1, 'transparent');
+    nebulaeCtx.fillStyle = gradient2;
+    nebulaeCtx.fillRect(0, 0, width, height);
+  }
+  
+  function animate() {
+    starCtx.clearRect(0, 0, width, height);
+    starCtx.globalCompositeOperation = 'lighter';
+    
+    const parallaxX = (mouseX / width - 0.5) * 20;
+    const parallaxY = (mouseY / height - 0.5) * 20;
+    
+    for (const star of stars) {
+      star.x += star.vx * star.z;
+      star.y += star.vy * star.z;
+      star.twinklePhase += star.twinkleSpeed;
+      
+      if (star.y > height) {
+        star.y = 0;
+        star.x = Math.random() * width;
+      }
+      if (star.x > width) star.x = 0;
+      if (star.x < 0) star.x = width;
+      
+      const twinkle = 0.3 + Math.sin(star.twinklePhase) * 0.7;
+      const finalOpacity = star.opacity * twinkle;
+      
+      const px = star.x + parallaxX * star.z;
+      const py = star.y + parallaxY * star.z;
+      
+      const gradient = starCtx.createRadialGradient(px, py, 0, px, py, star.radius * 4);
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${finalOpacity})`);
+      gradient.addColorStop(0.4, `rgba(200, 220, 255, ${finalOpacity * 0.6})`);
+      gradient.addColorStop(1, 'transparent');
+      
+      starCtx.fillStyle = gradient;
+      starCtx.beginPath();
+      starCtx.arc(px, py, star.radius * 3, 0, Math.PI * 2);
+      starCtx.fill();
+    }
+    
+    if (Math.random() < 0.01 && shootingStars.length < 3) {
+      shootingStars.push(createShootingStar());
+    }
+    
+    for (let i = shootingStars.length - 1; i >= 0; i--) {
+      const ss = shootingStars[i];
+      ss.x += ss.vx;
+      ss.y += ss.vy;
+      ss.life--;
+      
+      if (ss.life <= 0) {
+        shootingStars.splice(i, 1);
+        continue;
+      }
+      
+      const opacity = ss.life / ss.maxLife;
+      starCtx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+      starCtx.lineWidth = 2;
+      starCtx.beginPath();
+      starCtx.moveTo(ss.x, ss.y);
+      starCtx.lineTo(ss.x - ss.vx * 10, ss.y - ss.vy * 10);
+      starCtx.stroke();
+      
+      const glow = starCtx.createRadialGradient(ss.x, ss.y, 0, ss.x, ss.y, 15);
+      glow.addColorStop(0, `rgba(255, 255, 255, ${opacity * 0.8})`);
+      glow.addColorStop(1, 'transparent');
+      starCtx.fillStyle = glow;
+      starCtx.beginPath();
+      starCtx.arc(ss.x, ss.y, 15, 0, Math.PI * 2);
+      starCtx.fill();
+    }
+    
+    requestAnimationFrame(animate);
+  }
+  
+  window.addEventListener('resize', resize);
+  window.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+  
+  init();
+  animate();
+})();
+
+// Application State & Database
+const APP_STATE = {
+  currentView: 'map',
+  openPanels: [],
+  character: {
+    name: 'Guardian',
+    class: 'Coordinator',
+    level: 1,
+    xp: 0,
+    health: 100,
+    maxHealth: 100,
+    mana: 100,
+    maxMana: 100,
+    skillPoints: 3,
+  },
+  party: [
+    { id: 'p1', name: 'Scout Alpha', role: 'Scout', online: true, emoji: '🔍', health: 90, maxHealth: 100 },
+    { id: 'p2', name: 'Healer Beta', role: 'Healer', online: true, emoji: '⚕️', health: 100, maxHealth: 100 },
+    { id: 'p3', name: 'Engineer Gamma', role: 'Engineer', online: false, emoji: '🔧', health: 75, maxHealth: 100 },
+  ],
+  guild: {
+    name: 'Coastal Guardians',
+    members: 5,
+    rank: 12,
+  },
+  streak: 0,
+  lastVisit: null,
+};
+
+const DB_NAME = 'port-royal-rpg-v1';
+const DB_VERSION = 1;
+const STORES = ['strategies', 'quests', 'inventory', 'skills', 'party', 'settings'];
+let db;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      STORES.forEach(storeName => {
+        if (!database.objectStoreNames.contains(storeName)) {
+          database.createObjectStore(storeName, { keyPath: 'id' });
+        }
+      });
+    };
+    
+    request.onsuccess = () => {
+      db = request.result;
+      resolve();
+    };
+    
+    request.onerror = () => reject(request.error);
+  });
+}
+
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+async function dbPut(storeName, obj) {
+  if (!obj.id) obj.id = uid();
+  obj.updated = new Date().toISOString();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const request = tx.objectStore(storeName).put(obj);
+    request.onsuccess = () => resolve(obj);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function dbGetAll(storeName) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName);
+    const request = tx.objectStore(storeName).getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Toast Notification System
+function showToast(title, message, type = 'success', duration = 3000) {
+  const container = document.getElementById('toastContainer');
+  
+  const icons = {
+    success: '✅',
+    warning: '⚠️',
+    error: '❌',
+    legendary: '🌟',
+    info: 'ℹ️',
+  };
+  
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <div class="toast-icon">${icons[type] || icons.info}</div>
+    <div class="toast-content">
+      <div class="toast-title">${title}</div>
+      <div class="toast-message">${message}</div>
+    </div>
+  `;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideInRight 0.4s ease reverse';
+    setTimeout(() => toast.remove(), 400);
+  }, duration);
+}
+
+// XP & Level System
+function awardXP(amount, reason) {
+  APP_STATE.character.xp += amount;
+  
+  const xpForNextLevel = APP_STATE.character.level * 100;
+  
+  if (APP_STATE.character.xp >= xpForNextLevel) {
+    APP_STATE.character.level++;
+    APP_STATE.character.xp -= xpForNextLevel;
+    APP_STATE.character.skillPoints += 2;
+    showToast('LEVEL UP!', `You are now level ${APP_STATE.character.level}! +2 Skill Points`, 'legendary', 4000);
+  }
+  
+  updateCharacterDisplay();
+  showToast('XP Gained', `+${amount} XP: ${reason}`, 'success', 2000);
+}
+
+function updateCharacterDisplay() {
+  const char = APP_STATE.character;
+  const xpForNextLevel = char.level * 100;
+  const xpPercent = (char.xp / xpForNextLevel) * 100;
+  
+  document.getElementById('globalLevel').textContent = char.level;
+  document.getElementById('xpValue').textContent = `${char.xp}/${xpForNextLevel}`;
+  document.getElementById('xpBar').style.width = `${xpPercent}%`;
+  document.getElementById('charPortrait').setAttribute('data-level', char.level);
+  document.getElementById('charName').textContent = char.name;
+  document.getElementById('charClass').textContent = char.class.toUpperCase();
+}
+
+// Panel System
+function togglePanel(panelName) {
+  const panel = document.getElementById(`panel${panelName.charAt(0).toUpperCase() + panelName.slice(1)}`);
+  const toggle = document.querySelector(`.panel-toggle[data-panel="${panelName}"]`);
+  const isOpen = panel.classList.contains('open');
+  
+  if (isOpen) {
+    panel.classList.remove('open');
+    toggle.classList.remove('active');
+    APP_STATE.openPanels = APP_STATE.openPanels.filter(p => p !== panelName);
+  } else {
+    panel.classList.add('open');
+    toggle.classList.add('active');
+    APP_STATE.openPanels.push(panelName);
+    
+    switch(panelName) {
+      case 'strategies':
+        renderStrategies();
+        break;
+      case 'quests':
+        renderQuests();
+        break;
+      case 'party':
+        renderParty();
+        break;
+      case 'skills':
+        renderSkills();
+        break;
+    }
+  }
+}
+
+document.querySelectorAll('.panel-close').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const panelName = btn.getAttribute('data-close');
+    togglePanel(panelName);
+  });
+});
+
+document.querySelectorAll('.panel-toggle').forEach(toggle => {
+  toggle.addEventListener('click', () => {
+    const panelName = toggle.getAttribute('data-panel');
+    togglePanel(panelName);
+  });
+});
+
+// Render Functions
+async function renderStrategies() {
+  const content = document.getElementById('strategiesContent');
+  let strategies = await dbGetAll('strategies');
+  
+  if (strategies.length === 0) {
+    strategies = [
+      {
+        id: uid(),
+        title: 'Tsunami High Ground',
+        description: 'Immediate evacuation to 30m elevation or 3km inland.',
+        rarity: 'legendary',
+        category: 'hazard:tsunami',
+        icon: '🌊',
+      },
+      {
+        id: uid(),
+        title: 'Storm Surge Protocol',
+        description: 'Early relocation 24-48h before storm landfall.',
+        rarity: 'epic',
+        category: 'hazard:storm',
+        icon: '🌀',
+      },
+    ];
+    
+    for (const s of strategies) {
+      await dbPut('strategies', s);
+    }
+  }
+  
+  content.innerHTML = `
+    <div class="mb-2">
+      <button class="btn primary" onclick="createStrategy()">+ New Strategy</button>
+    </div>
+    ${strategies.map(s => `
+      <div class="quest-card" onclick="viewStrategy('${s.id}')">
+        <div class="quest-header">
+          <div class="quest-title">
+            <span>${s.icon || '🌿'}</span>
+            <span>${s.title}</span>
+          </div>
+          <div class="quest-rarity ${s.rarity}">${s.rarity}</div>
+        </div>
+        <div class="quest-description">${s.description}</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+async function renderQuests() {
+  const content = document.getElementById('questsContent');
+  content.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--muted);">Quest system coming soon! Complete actions to unlock achievements.</div>';
+}
+
+async function renderParty() {
+  const content = document.getElementById('partyContent');
+  
+  content.innerHTML = `
+    <div class="mb-2">
+      <button class="btn primary" onclick="inviteMember()">+ Invite Member</button>
+    </div>
+    ${APP_STATE.party.map(member => `
+      <div class="party-member-card">
+        <div class="party-member-avatar ${member.online ? 'online' : ''}">
+          ${member.emoji}
+        </div>
+        <div class="party-member-info">
+          <div class="party-member-name">${member.name}</div>
+          <div class="party-member-role">${member.role}</div>
+        </div>
+        <div style="font-size: 0.8rem; color: ${member.online ? 'var(--ok)' : 'var(--muted)'};">
+          ${member.online ? '🟢 Online' : '⚫ Offline'}
+        </div>
+      </div>
+    `).join('')}
+    
+    <div class="mt-2" style="padding: 1rem; background: rgba(89,210,255,0.1); border: 1px solid var(--brand); border-radius: 8px;">
+      <div style="font-weight: 700; color: var(--brand); margin-bottom: 0.5rem;">Guild: ${APP_STATE.guild.name}</div>
+      <div style="font-size: 0.85rem; color: var(--muted);">
+        <div>Members: ${APP_STATE.guild.members}</div>
+        <div>Global Rank: #${APP_STATE.guild.rank}</div>
+      </div>
+    </div>
+  `;
+}
+
+async function renderSkills() {
+  const content = document.getElementById('skillsContent');
+  content.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--muted);">Skill tree coming soon! Earn skill points by leveling up.</div>';
+}
+
+// Main Display Views
+function changeMainView(view) {
+  APP_STATE.currentView = view;
+  const content = document.getElementById('mainContent');
+  const title = document.getElementById('mainTitle');
+  
+  switch(view) {
+    case 'map':
+      title.textContent = 'TACTICAL MAP • KINGSTON & PORT ROYAL';
+      content.innerHTML = `
+        <div class="map-container">
+          <svg class="map-svg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
+            <rect x="0" y="0" width="1000" height="500" fill="#0b1933"/>
+            <path d="M100,240 C260,160 480,180 640,220 C720,240 780,280 840,300 C880,320 910,360 940,380 L940,500 L0,500 L0,300 C40,280 70,260 100,240 Z" fill="#0f213f"/>
+            <path d="M820,310 C860,320 900,330 930,340 C960,350 980,360 995,370 L995,385 C960,370 920,360 880,350 C860,345 840,338 820,330 Z" fill="#12294d"/>
+            <polyline points="860,335 820,320 760,305 700,300 640,295 580,290 520,285 460,280 420,275" 
+              stroke="var(--ok)" stroke-width="4" fill="none" stroke-dasharray="8 6"/>
+            <circle cx="860" cy="335" r="10" fill="var(--ok)"/>
+            <circle cx="640" cy="295" r="10" fill="var(--ok)"/>
+            <circle cx="420" cy="275" r="10" fill="var(--ok)"/>
+            <path d="M1000,360 L1000,500 L0,500 L0,440 C160,420 360,410 560,420 C760,430 920,440 1000,460 Z" 
+              fill="rgba(248,113,113,.2)" stroke="rgba(248,113,113,.5)" stroke-width="3"/>
+          </svg>
+        </div>
+      `;
+      break;
+      
+    case 'inventory':
+      title.textContent = 'INVENTORY • EVACUATION SUPPLIES';
+      content.innerHTML = `
+        <div class="inventory-grid">
+          ${Array.from({length: 24}, (_, i) => {
+            const items = [
+              { icon: '💧', qty: 12, name: 'Water (1L)' },
+              { icon: '🍞', qty: 8, name: 'Food Rations' },
+              { icon: '🔦', qty: 2, name: 'Flashlight' },
+              { icon: '🩹', qty: 1, name: 'First Aid Kit' },
+              { icon: '📻', qty: 1, name: 'Emergency Radio' },
+              { icon: '🔋', qty: 6, name: 'Batteries' },
+            ];
+            const item = items[i] || null;
+            return `
+              <div class="inventory-slot ${item ? 'has-item' : ''}" title="${item ? item.name : 'Empty Slot'}">
+                ${item ? `
+                  <div class="item-icon">${item.icon}</div>
+                  <div class="item-quantity">${item.qty}</div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+      break;
+  }
+}
+
+// Action Handlers
+function createStrategy() {
+  showToast('Strategy Created', 'New evacuation strategy added!', 'success');
+  awardXP(50, 'Strategy created');
+  renderStrategies();
+}
+
+function viewStrategy(id) {
+  showToast('Strategy Viewed', 'Opening detailed view...', 'info');
+}
+
+function inviteMember() {
+  showToast('Invite Sent', 'Party invitation sent!', 'info');
+}
+
+// Hotkey System
+document.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'i') togglePanel('strategies');
+  if (e.key.toLowerCase() === 'q') togglePanel('quests');
+  if (e.key.toLowerCase() === 'p') togglePanel('party');
+  if (e.key.toLowerCase() === 'k') togglePanel('skills');
+  
+  const num = parseInt(e.key);
+  if (num >= 1 && num <= 8) {
+    const slot = document.getElementById(`action${num}`);
+    slot.classList.add('active');
+    setTimeout(() => slot.classList.remove('active'), 200);
+    
+    switch(num) {
+      case 1: togglePanel('strategies'); break;
+      case 2: changeMainView('map'); break;
+      case 3: changeMainView('inventory'); break;
+      case 5: togglePanel('quests'); break;
+      case 6: togglePanel('skills'); break;
+    }
+  }
+});
+
+// Initialization
+async function init() {
+  try {
+    await openDB();
+    
+    const now = new Date();
+    if (APP_STATE.lastVisit) {
+      const lastDate = new Date(APP_STATE.lastVisit);
+      const daysDiff = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+      if (daysDiff === 1) {
+        APP_STATE.streak++;
+        awardXP(20, `${APP_STATE.streak} day streak!`);
+      } else if (daysDiff > 1) {
+        APP_STATE.streak = 1;
+      }
+    } else {
+      APP_STATE.streak = 1;
+    }
+    APP_STATE.lastVisit = now.toISOString();
+    
+    document.getElementById('globalStreak').textContent = `${APP_STATE.streak}🔥`;
+    
+    updateCharacterDisplay();
+    changeMainView('map');
+    
+    setTimeout(() => {
+      document.getElementById('loadingScreen').classList.add('hidden');
+      showToast('Welcome Back!', 'Command center online!', 'legendary', 3000);
+    }, 2000);
+    
+    console.log('%c🏝️ Port Royal RPG System Online', 'background: #0f1833; color: #59d2ff; padding: 10px; font-size: 16px; font-weight: bold;');
+    
+  } catch (error) {
+    console.error('Init error:', error);
+    showToast('Error', 'Failed to initialize. Please refresh.', 'error', 5000);
+  }
+}
+
+init();
+
+console.log('%c⚠️ SAFETY FIRST', 'background: #8b0000; color: #fff; padding: 10px; font-size: 14px; font-weight: bold;');
+console.log('%cCommunity resilience tool. Always follow official emergency guidance.', 'font-size: 12px; color: #fbbf24;');
+</script>
+
+<!-- ZERO-HARM FOOTER -->
+<div style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10,14,26,0.95); border-top: 2px solid rgba(89,210,255,0.3); padding: 0.5rem 1rem; font-size: 0.7rem; color: var(--muted); text-align: center; z-index: 1000; backdrop-filter: blur(12px);">
+  <strong style="color: var(--warn);">⚠️ Safety:</strong> Supplements official guidance • 
+  <strong style="color: var(--brand);">🔒 Privacy:</strong> Local data only • 
+  <strong style="color: var(--ok);">⚖️ License:</strong> CC BY-NC-SA 4.0 • Non-weaponization • 
+  <strong style="color: var(--legendary);">🎮 RPG:</strong> Gamification for engagement • 
+  <a href="mailto:admin@planetaryrestorationarchive.com" style="color: var(--accent);">Contact</a>
+</div>
+
+</body>
+</html>

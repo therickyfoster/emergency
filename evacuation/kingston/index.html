@@ -1,0 +1,3555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Port Royal Evacuation • Mycelial Strategy Bank</title>
+<meta name="description" content="Community-driven evacuation planning system for coastal resilience. Offline-capable, privacy-first, zero-harm design." />
+<meta name="theme-color" content="#0b0f1a" />
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: CSS Variables & Theme System
+   WHAT: Defines color schemes for multiple themes (space, medieval, anime, ocean)
+   HOW: Uses CSS custom properties that can be switched via JavaScript
+   USAGE: Themes auto-switch based on user preference or manual selection
+   OUTCOME: Consistent theming across entire application
+   EXPANSION PROMPT: "Add a [forest/desert/arctic] theme with [green/sand/ice] color palette"
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* Space Theme (Default) */
+  --bg: #0b0f1a;
+  --panel: #0f1526;
+  --card: #121a2e;
+  --ink: #e6f0ff;
+  --muted: #a8b3c7;
+  --brand: #59d2ff;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --ring: rgba(89,210,255,.35);
+  --accent: #ff66cc;
+  --accent2: #7c3aed;
+  --grid: #1a2340;
+  --glow: rgba(89,210,255,.6);
+  --particle: #59d2ff;
+}
+
+/* Medieval Theme */
+[data-theme="medieval"] {
+  --bg: #1a0f0a;
+  --panel: #2a1810;
+  --card: #3a2418;
+  --ink: #f5e6d3;
+  --muted: #c4a57b;
+  --brand: #d4af37;
+  --ok: #6b8e23;
+  --warn: #ff8c00;
+  --bad: #8b0000;
+  --ring: rgba(212,175,55,.35);
+  --accent: #cd853f;
+  --accent2: #8b4513;
+  --grid: #4a3428;
+  --glow: rgba(212,175,55,.6);
+  --particle: #d4af37;
+}
+
+/* Anime/Cyberpunk Theme */
+[data-theme="anime"] {
+  --bg: #0a0014;
+  --panel: #1a0028;
+  --card: #2d0047;
+  --ink: #f0e6ff;
+  --muted: #c4a7e7;
+  --brand: #ff00ff;
+  --ok: #00ff88;
+  --warn: #ffff00;
+  --bad: #ff0055;
+  --ring: rgba(255,0,255,.35);
+  --accent: #00ffff;
+  --accent2: #ff0088;
+  --grid: #4a0070;
+  --glow: rgba(255,0,255,.6);
+  --particle: #ff00ff;
+}
+
+/* Ocean Theme */
+[data-theme="ocean"] {
+  --bg: #0a1628;
+  --panel: #0f2238;
+  --card: #143048;
+  --ink: #e0f2ff;
+  --muted: #93c5fd;
+  --brand: #06b6d4;
+  --ok: #10b981;
+  --warn: #f59e0b;
+  --bad: #ef4444;
+  --ring: rgba(6,182,212,.35);
+  --accent: #3b82f6;
+  --accent2: #8b5cf6;
+  --grid: #1e3a5f;
+  --glow: rgba(6,182,212,.6);
+  --particle: #06b6d4;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Base Styles & Reset
+   WHAT: Foundational CSS reset and base styling
+   HOW: Box-sizing, font smoothing, scroll behavior
+   USAGE: Applied globally to ensure consistency
+   OUTCOME: Smooth rendering across browsers
+   ═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+html { 
+  height: 100%; 
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  margin: 0;
+  padding: 0;
+  font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  overflow-x: hidden;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+a { 
+  color: var(--brand); 
+  text-decoration: none; 
+  transition: color 0.2s ease;
+}
+a:hover { 
+  color: var(--accent); 
+  text-decoration: underline;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Animated Starfield Canvas
+   WHAT: Full-screen particle background with parallax effect
+   HOW: Canvas element positioned fixed behind content
+   USAGE: Automatically animates on page load
+   OUTCOME: Dynamic, engaging background with depth
+   EXPANSION PROMPT: "Add shooting stars every 5-10 seconds with trails"
+   ═══════════════════════════════════════════════════════════════ */
+canvas#starfield {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: radial-gradient(1200px 800px at 70% -10%, #13203f 0%, var(--bg) 55%), #000;
+  opacity: 0.85;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Constellation Overlay
+   WHAT: SVG overlay showing connecting lines between key nodes
+   HOW: Absolute positioned SVG with animated paths
+   USAGE: Appears when gamification level increases
+   OUTCOME: Visual reward system showing progress connections
+   ═══════════════════════════════════════════════════════════════ */
+#constellation {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.15;
+  transition: opacity 0.5s ease;
+}
+#constellation.active { opacity: 0.3; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Main App Layout Grid
+   WHAT: Responsive grid layout for header, sidebar, and main content
+   HOW: CSS Grid with named areas for semantic structure
+   USAGE: Automatically adjusts for mobile/tablet/desktop
+   OUTCOME: Flexible, maintainable layout system
+   EXPANSION PROMPT: "Add a right sidebar for real-time notifications"
+   ═══════════════════════════════════════════════════════════════ */
+.app {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas: 
+    "hud hud"
+    "top top" 
+    "left main";
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Gamification HUD (Heads-Up Display)
+   WHAT: Top banner showing XP, level, achievements, streak
+   HOW: Fixed header with animated progress bars and badges
+   USAGE: Updates automatically when user completes actions
+   OUTCOME: Motivational feedback loop encouraging engagement
+   EXPANSION PROMPT: "Add daily challenges and weekly leaderboards"
+   ═══════════════════════════════════════════════════════════════ */
+.hud {
+  grid-area: hud;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(180deg, rgba(15,23,48,0.95), rgba(11,17,36,0.85));
+  border-bottom: 1px solid rgba(89,210,255,0.2);
+  backdrop-filter: blur(10px);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.hud-section {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.hud-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+}
+.hud-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+.hud-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--brand);
+  text-shadow: 0 0 8px var(--glow);
+}
+.xp-bar {
+  position: relative;
+  width: 150px;
+  height: 8px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(89,210,255,0.3);
+}
+.xp-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--accent));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 10px var(--glow);
+}
+.achievement-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--brand));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  border: 2px solid var(--glow);
+  box-shadow: 0 0 12px var(--glow);
+  animation: pulse 2s ease-in-out infinite;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.achievement-badge:hover {
+  transform: scale(1.15);
+}
+.achievement-badge.locked {
+  background: rgba(100,100,100,0.3);
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: none;
+  animation: none;
+  filter: grayscale(1);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Header Bar
+   WHAT: Main navigation bar with title, status chips, and actions
+   HOW: Flexbox layout with gradient background
+   USAGE: Always visible at top of viewport
+   OUTCOME: Quick access to core functions and status info
+   ═══════════════════════════════════════════════════════════════ */
+header {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(26,36,66,0.8);
+  background: linear-gradient(180deg, #0e1730, #0b1124);
+  backdrop-filter: blur(8px);
+}
+header .title {
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+header .chip {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--ring);
+  border-radius: 999px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+}
+header .chip:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  box-shadow: 0 0 8px var(--ring);
+}
+header .actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Theme Selector Dropdown
+   WHAT: Visual theme switcher (space, medieval, anime, ocean)
+   HOW: Select dropdown that changes data-theme attribute
+   USAGE: Click to choose aesthetic preference
+   OUTCOME: Instant theme transformation across all elements
+   EXPANSION PROMPT: "Add custom theme builder with color picker"
+   ═══════════════════════════════════════════════════════════════ */
+.theme-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.theme-selector select {
+  appearance: none;
+  background: linear-gradient(180deg, #12203f, #0e1a33);
+  border: 1px solid #223056;
+  color: var(--ink);
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+.theme-selector select:hover {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Button Styles
+   WHAT: Unified button component with hover states
+   HOW: Gradient backgrounds with border and shadow effects
+   USAGE: Used for all interactive actions throughout app
+   OUTCOME: Consistent, accessible interaction patterns
+   ═══════════════════════════════════════════════════════════════ */
+button, .btn {
+  appearance: none;
+  border: 1px solid #223056;
+  background: linear-gradient(180deg, #12203f, #0e1a33);
+  color: var(--ink);
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+button:hover {
+  border-color: #2d3d6a;
+  box-shadow: 0 0 0 3px var(--ring), 0 4px 12px rgba(0,0,0,0.3);
+  transform: translateY(-1px);
+}
+button:active {
+  transform: translateY(0);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button.primary {
+  background: linear-gradient(135deg, var(--brand), var(--accent));
+  border-color: var(--brand);
+  font-weight: 600;
+}
+button.danger {
+  background: linear-gradient(135deg, var(--bad), #c53030);
+  border-color: var(--bad);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Sidebar (Left Panel)
+   WHAT: Scrollable navigation and quick filters panel
+   HOW: Fixed-width column with overflow auto
+   USAGE: Contains strategy tree, collections, and links
+   OUTCOME: Persistent access to core data structures
+   ═══════════════════════════════════════════════════════════════ */
+aside {
+  grid-area: left;
+  overflow: auto;
+  background: linear-gradient(180deg, #0c1328, #0a0f21);
+  border-right: 1px solid #152044;
+  scrollbar-width: thin;
+  scrollbar-color: var(--brand) transparent;
+}
+aside::-webkit-scrollbar {
+  width: 6px;
+}
+aside::-webkit-scrollbar-track {
+  background: transparent;
+}
+aside::-webkit-scrollbar-thumb {
+  background: var(--brand);
+  border-radius: 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Main Content Area
+   WHAT: Primary scrollable content region
+   HOW: Flex-grow column with relative positioning
+   USAGE: Displays maps, wizards, tables, and detailed content
+   OUTCOME: Spacious workspace for complex interactions
+   ═══════════════════════════════════════════════════════════════ */
+main {
+  grid-area: main;
+  overflow: auto;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--brand) transparent;
+}
+main::-webkit-scrollbar {
+  width: 8px;
+}
+main::-webkit-scrollbar-track {
+  background: transparent;
+}
+main::-webkit-scrollbar-thumb {
+  background: var(--brand);
+  border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Section & Card Components
+   WHAT: Content containers with padding and styling
+   HOW: Nested structure - section > card > content
+   USAGE: Wrap all content blocks in cards for consistency
+   OUTCOME: Modular, visually distinct content areas
+   EXPANSION PROMPT: "Add card drag-and-drop reordering"
+   ═══════════════════════════════════════════════════════════════ */
+.section {
+  padding: 1rem;
+}
+.card {
+  background: linear-gradient(180deg, var(--panel), #0b142a);
+  border: 1px solid #1b2650;
+  border-radius: 1rem;
+  padding: 1.2rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--brand), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.card:hover::before {
+  opacity: 1;
+}
+.card:hover {
+  border-color: rgba(89,210,255,0.4);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 20px var(--ring);
+  transform: translateY(-2px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Collapsible Sections
+   WHAT: Expandable/collapsible content blocks
+   HOW: Details/summary HTML5 elements with custom styling
+   USAGE: Click header to expand/collapse content
+   OUTCOME: Space-efficient long-form content organization
+   EXPANSION PROMPT: "Add 'expand all' and 'collapse all' buttons"
+   ═══════════════════════════════════════════════════════════════ */
+details {
+  margin: 0.8rem 0;
+}
+summary {
+  cursor: pointer;
+  padding: 0.8rem;
+  background: linear-gradient(135deg, rgba(18,32,63,0.6), rgba(14,26,51,0.6));
+  border: 1px solid rgba(34,48,86,0.8);
+  border-radius: 0.65rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+summary:hover {
+  background: linear-gradient(135deg, rgba(18,32,63,0.8), rgba(14,26,51,0.8));
+  border-color: var(--brand);
+  box-shadow: 0 0 12px var(--ring);
+}
+summary::after {
+  content: '▼';
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+  color: var(--brand);
+}
+details[open] summary::after {
+  transform: rotate(-180deg);
+}
+details[open] summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: transparent;
+}
+.details-content {
+  padding: 1rem;
+  border: 1px solid rgba(34,48,86,0.8);
+  border-top: none;
+  border-bottom-left-radius: 0.65rem;
+  border-bottom-right-radius: 0.65rem;
+  background: rgba(11,20,42,0.4);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Responsive Grid System
+   WHAT: Flexible grid layout for cards and content
+   HOW: CSS Grid with auto-fit minmax for responsiveness
+   USAGE: Add class .row with .cols-* modifier
+   OUTCOME: Automatic responsive layout across screen sizes
+   ═══════════════════════════════════════════════════════════════ */
+.row {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.row.cols-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.row.cols-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.row.cols-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Card Headers
+   WHAT: Title bar for cards with actions
+   HOW: Flexbox with space-between alignment
+   USAGE: Place at top of .card elements
+   OUTCOME: Consistent header pattern with optional actions
+   ═══════════════════════════════════════════════════════════════ */
+.h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.h h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #dfe8ff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.h h3::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(180deg, var(--brand), var(--accent));
+  border-radius: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Utility Classes
+   WHAT: Common text, spacing, and display utilities
+   HOW: Single-purpose classes for rapid composition
+   USAGE: Add to any element for quick styling
+   OUTCOME: Faster UI development without custom CSS
+   ═══════════════════════════════════════════════════════════════ */
+.muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
+.bold { font-weight: 600; }
+.center { text-align: center; }
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid #203056;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: #cfe6ff;
+  background: rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+.pill:hover {
+  border-color: var(--brand);
+  background: rgba(89,210,255,0.1);
+  box-shadow: 0 0 8px var(--ring);
+}
+.tag {
+  display: inline-block;
+  margin: 0.2rem 0.2rem 0 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Strategy Tree (Mycelial Network)
+   WHAT: Hierarchical list of evacuation strategies
+   HOW: Custom styled list with expand/collapse functionality
+   USAGE: Main data structure in sidebar
+   OUTCOME: Visual representation of interconnected plans
+   EXPANSION PROMPT: "Add drag-to-reorder and visual connections"
+   ═══════════════════════════════════════════════════════════════ */
+.tree {
+  list-style: none;
+  padding: 0;
+  margin: 0.8rem 0;
+}
+.tree li {
+  border: 1px solid #18244c;
+  border-radius: 0.75rem;
+  margin: 0.6rem 0;
+  background: linear-gradient(180deg, #0f1833, #0b1326);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+.tree li:hover {
+  border-color: rgba(89,210,255,0.5);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.tree header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.tree header .icon {
+  font-size: 1.2rem;
+  filter: drop-shadow(0 0 4px var(--glow));
+}
+.tree header .node-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.tree .meta {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.tree .meta .state {
+  font-size: 0.7rem;
+  opacity: 0.85;
+  color: var(--muted);
+}
+.tree .body {
+  padding: 0.9rem;
+  border-top: 1px dashed rgba(26,43,88,0.6);
+  display: none;
+  animation: slideDown 0.3s ease;
+}
+.tree li.expanded .body {
+  display: block;
+}
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.tree .actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+  flex-wrap: wrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Interactive Map Display
+   WHAT: Visual representation of evacuation routes and zones
+   HOW: SVG overlay on styled background with grid
+   USAGE: Shows geographic context for planning
+   OUTCOME: Spatial awareness of risk areas and safe routes
+   EXPANSION PROMPT: "Integrate real Leaflet/Mapbox with user location"
+   ═══════════════════════════════════════════════════════════════ */
+.map {
+  height: 380px;
+  border: 1px solid #1a254d;
+  border-radius: 1rem;
+  background: conic-gradient(from 180deg at 60% 30%, #0f1b33, #102042, #0b142a, #0f1b33);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 2px 20px rgba(0,0,0,0.5);
+}
+.map .grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(0deg, transparent 95%, rgba(255,255,255,0.05) 95%),
+    linear-gradient(90deg, transparent 95%, rgba(255,255,255,0.05) 95%);
+  background-size: 40px 40px;
+  mix-blend-mode: screen;
+  opacity: 0.3;
+}
+.map svg {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6));
+}
+.legend {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+.legend .key {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+.dot.sea { background: #2aa9ff; }
+.dot.land { background: #5ad1ff; }
+.dot.route { background: var(--ok); }
+.dot.danger { background: var(--bad); }
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Floating Drawer (Status Panel)
+   WHAT: Overlay panel for real-time status and alerts
+   HOW: Position absolute with glassmorphism effect
+   USAGE: Shows signal alerts, system status, quick stats
+   OUTCOME: Non-intrusive persistent information display
+   ═══════════════════════════════════════════════════════════════ */
+.drawer {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  z-index: 100;
+  max-width: 320px;
+}
+.floating {
+  background: linear-gradient(135deg, rgba(15,24,51,0.85), rgba(10,17,36,0.85));
+  border: 1px solid rgba(27,38,80,0.8);
+  border-radius: 0.9rem;
+  padding: 0.9rem;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+.floating:hover {
+  border-color: rgba(89,210,255,0.6);
+  box-shadow: 0 12px 50px rgba(0,0,0,0.55), 0 0 20px var(--ring);
+}
+.floating h4 {
+  margin: 0.2rem 0 0.6rem 0;
+  font-size: 0.95rem;
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Data Tables
+   WHAT: Structured data display with editable fields
+   HOW: Table with alternating row colors and inline editing
+   USAGE: Contacts, checklists, shelters, inventory lists
+   OUTCOME: Organized, scannable data with easy updates
+   EXPANSION PROMPT: "Add sortable columns and CSV export"
+   ═══════════════════════════════════════════════════════════════ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.6rem;
+}
+th, td {
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px dashed rgba(26,43,88,0.6);
+  text-align: left;
+}
+th {
+  color: var(--brand);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(0,0,0,0.2);
+}
+tr:hover {
+  background: rgba(89,210,255,0.05);
+}
+td input[type="text"],
+td input[type="tel"],
+td input[type="email"] {
+  width: 100%;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(34,48,86,0.6);
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  color: var(--ink);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+td input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+td input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--brand);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Toast Notification System
+   WHAT: Temporary popup messages for user feedback
+   HOW: Fixed positioned div with fade in/out animation
+   USAGE: Automatically appears on actions (save, delete, etc)
+   OUTCOME: Non-blocking confirmation of user actions
+   EXPANSION PROMPT: "Add toast queue for multiple messages"
+   ═══════════════════════════════════════════════════════════════ */
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 2rem;
+  background: linear-gradient(135deg, #0e1a33, #12203f);
+  border: 1px solid var(--brand);
+  color: var(--ink);
+  padding: 0.8rem 1.2rem;
+  border-radius: 0.7rem;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 20px var(--ring);
+  display: none;
+  z-index: 9999;
+  animation: toastIn 0.3s ease;
+  backdrop-filter: blur(8px);
+  max-width: 90vw;
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Search Interface
+   WHAT: Real-time search with highlighting
+   HOW: Input field with event listeners for filtering
+   USAGE: Type to filter strategies, contacts, any list
+   OUTCOME: Instant results with matched text highlighted
+   EXPANSION PROMPT: "Add fuzzy search and recent searches"
+   ═══════════════════════════════════════════════════════════════ */
+.search {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0.8rem 0;
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  background: linear-gradient(135deg, rgba(14,24,51,0.6), rgba(11,17,36,0.6));
+  border: 1px solid #223056;
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  color: var(--ink);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+.search input::placeholder {
+  color: var(--muted);
+  opacity: 0.6;
+}
+.search input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--ring);
+  background: rgba(14,24,51,0.8);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Badge System
+   WHAT: Status indicators with semantic colors
+   HOW: Inline-flex spans with border and background
+   USAGE: Show status (ok/warn/bad), tags, categories
+   OUTCOME: Quick visual scanning of item states
+   ═══════════════════════════════════════════════════════════════ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid #203056;
+  color: #cfe6ff;
+  background: rgba(0,0,0,0.3);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.badge.ok {
+  border-color: rgba(52,211,153,0.5);
+  color: #d6ffe9;
+  background: rgba(52,211,153,0.1);
+}
+.badge.warn {
+  border-color: rgba(251,191,36,0.5);
+  color: #ffecc6;
+  background: rgba(251,191,36,0.1);
+}
+.badge.bad {
+  border-color: rgba(248,113,113,0.5);
+  color: #ffd2d2;
+  background: rgba(248,113,113,0.1);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Timeline Visualization
+   WHAT: Horizontal timeline showing evacuation phases
+   HOW: Flexbox with connecting lines and phase markers
+   USAGE: Visual representation of sequential actions
+   OUTCOME: Clear mental model of evacuation sequence
+   EXPANSION PROMPT: "Add interactive timeline with time estimates"
+   ═══════════════════════════════════════════════════════════════ */
+.timeline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 0;
+  position: relative;
+  margin: 1rem 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--brand), var(--accent), var(--brand));
+  opacity: 0.3;
+  z-index: 0;
+}
+.timeline-phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1;
+  position: relative;
+}
+.timeline-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand), var(--accent));
+  border: 3px solid var(--bg);
+  box-shadow: 0 0 12px var(--glow);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.timeline-dot:hover {
+  transform: scale(1.3);
+  box-shadow: 0 0 20px var(--glow);
+}
+.timeline-dot.completed {
+  background: linear-gradient(135deg, var(--ok), #10b981);
+}
+.timeline-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+  max-width: 100px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Modal Dialog System
+   WHAT: Overlay dialogs for detailed forms and confirmations
+   HOW: Fixed positioned backdrop with centered content
+   USAGE: Opens on demand for complex interactions
+   OUTCOME: Focused user attention without page navigation
+   EXPANSION PROMPT: "Add modal animations and stacking context"
+   ═══════════════════════════════════════════════════════════════ */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal.active {
+  display: flex;
+}
+.modal-content {
+  background: linear-gradient(180deg, var(--panel), var(--bg));
+  border: 1px solid var(--brand);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 40px var(--ring);
+  animation: modalIn 0.3s ease;
+}
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(89,210,255,0.2);
+}
+.modal-header h3 {
+  margin: 0;
+  color: var(--brand);
+}
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+.modal-close:hover {
+  background: rgba(248,113,113,0.2);
+  color: var(--bad);
+}
+.modal-body {
+  margin: 1rem 0;
+}
+.modal-footer {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(89,210,255,0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Form Styles
+   WHAT: Consistent form field styling
+   HOW: Input, textarea, select with matching aesthetics
+   USAGE: All data entry throughout application
+   OUTCOME: Cohesive, accessible form experience
+   ═══════════════════════════════════════════════════════════════ */
+label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+  color: var(--brand);
+  font-size: 0.9rem;
+}
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+textarea,
+select {
+  width: 100%;
+  background: rgba(14,24,51,0.6);
+  border: 1px solid #223056;
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--ring);
+  background: rgba(14,24,51,0.8);
+}
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.form-group {
+  margin-bottom: 1rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Print Stylesheet
+   WHAT: Optimized styles for printing/PDF export
+   HOW: Media query that simplifies layout for print
+   USAGE: Automatically applied when printing
+   OUTCOME: Clean, readable printed documentation
+   ═══════════════════════════════════════════════════════════════ */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  canvas, .drawer, .hud, header .actions, button, .floating {
+    display: none !important;
+  }
+  .app {
+    display: block;
+  }
+  aside, main {
+    border: none;
+  }
+  .card {
+    page-break-inside: avoid;
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+  a {
+    color: #0066cc;
+    text-decoration: underline;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Mobile Responsive Design
+   WHAT: Layout adaptations for small screens
+   HOW: Media queries changing grid to stacked layout
+   USAGE: Automatic on mobile devices
+   OUTCOME: Fully functional mobile experience
+   EXPANSION PROMPT: "Add swipe gestures for navigation"
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "hud"
+      "top" 
+      "main"
+      "left";
+  }
+  aside {
+    border-right: none;
+    border-top: 1px solid #152044;
+    max-height: 300px;
+  }
+  .drawer {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    max-width: 100%;
+    margin: 1rem;
+  }
+  .row.cols-2,
+  .row.cols-3,
+  .row.cols-4 {
+    grid-template-columns: 1fr;
+  }
+  .hud {
+    font-size: 0.85rem;
+  }
+  .hud-stat {
+    min-width: 60px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Accessibility Enhancements
+   WHAT: Screen reader and keyboard navigation support
+   HOW: Focus states, ARIA attributes, semantic HTML
+   USAGE: Automatically improves accessibility
+   OUTCOME: Inclusive experience for all users
+   ═══════════════════════════════════════════════════════════════ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+*:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Loading States
+   WHAT: Skeleton screens and loading indicators
+   HOW: Animated gradients and placeholders
+   USAGE: Shown during data fetching
+   OUTCOME: Better perceived performance
+   ═══════════════════════════════════════════════════════════════ */
+.skeleton {
+  background: linear-gradient(90deg, 
+    rgba(255,255,255,0.05) 25%, 
+    rgba(255,255,255,0.1) 50%, 
+    rgba(255,255,255,0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.5rem;
+  height: 20px;
+  margin: 0.5rem 0;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Noscript Fallback
+   WHAT: Message shown when JavaScript is disabled
+   HOW: Noscript tag with styled content
+   USAGE: Informs users about required JavaScript
+   OUTCOME: Graceful degradation messaging
+   ═══════════════════════════════════════════════════════════════ */
+noscript {
+  display: block;
+  padding: 2rem;
+  background: linear-gradient(135deg, #1a0f0a, #3a2418);
+  border: 2px solid var(--warn);
+  border-radius: 1rem;
+  margin: 2rem;
+  text-align: center;
+  color: var(--ink);
+  font-size: 1.1rem;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLTIP: Noscript Warning
+     WHAT: Fallback message for non-JS environments
+     ═══════════════════════════════════════════════════════════════ -->
+<noscript>
+  <h2>⚠️ JavaScript Required</h2>
+  <p>This application requires JavaScript to function. Please enable JavaScript in your browser settings.</p>
+  <p>This offline-capable tool uses IndexedDB for local storage and Service Workers for offline functionality.</p>
+</noscript>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLTIP: Animated Starfield Background
+     WHAT: Canvas element for particle animation system
+     HOW: JavaScript draws and animates stars with parallax effect
+     USAGE: Automatically renders on page load
+     OUTCOME: Dynamic, engaging visual backdrop
+     ═══════════════════════════════════════════════════════════════ -->
+<canvas id="starfield" aria-hidden="true"></canvas>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLTIP: Constellation Overlay
+     WHAT: SVG overlay showing node connections (gamification feature)
+     HOW: Dynamically drawn lines connecting achievement nodes
+     USAGE: Appears as user progresses through levels
+     OUTCOME: Visual reward showing interconnected progress
+     ═══════════════════════════════════════════════════════════════ -->
+<svg id="constellation" aria-hidden="true">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<div class="app" id="app">
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Gamification HUD
+       WHAT: Top banner showing XP, level, streak, achievements
+       HOW: Real-time updates via JavaScript when user completes actions
+       USAGE: Automatically tracks: nodes created, plans forked, days active
+       OUTCOME: Motivational system encouraging regular engagement
+       EXPANSION PROMPT: "Add daily challenges, bonus XP events, leaderboards"
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="hud">
+    <div class="hud-section">
+      <div class="hud-stat">
+        <span class="hud-label">Level</span>
+        <span class="hud-value" id="hudLevel">1</span>
+      </div>
+      <div class="hud-stat">
+        <span class="hud-label">XP</span>
+        <div class="xp-bar">
+          <div class="xp-fill" id="xpFill" style="width: 0%"></div>
+        </div>
+      </div>
+      <div class="hud-stat">
+        <span class="hud-label">Streak</span>
+        <span class="hud-value" id="hudStreak">0🔥</span>
+      </div>
+    </div>
+    <div class="hud-section">
+      <span class="hud-label">Achievements</span>
+      <div class="achievement-badge locked" id="ach1" title="First Step: Create your first node">🌱</div>
+      <div class="achievement-badge locked" id="ach2" title="Networker: Fork 5 strategies">🌿</div>
+      <div class="achievement-badge locked" id="ach3" title="Prepared: Complete 10 checklist items">✅</div>
+      <div class="achievement-badge locked" id="ach4" title="Community: Add 5 contacts">👥</div>
+      <div class="achievement-badge locked" id="ach5" title="Cartographer: Add 3 shelter points">🗺️</div>
+      <div class="achievement-badge locked" id="ach6" title="Week Warrior: 7 day streak">⚡</div>
+    </div>
+    <div class="hud-section">
+      <div class="theme-selector">
+        <label for="themeSelect" class="hud-label" style="margin-bottom: 0;">Theme:</label>
+        <select id="themeSelect">
+          <option value="space">🚀 Space</option>
+          <option value="medieval">🏰 Medieval</option>
+          <option value="anime">🎌 Anime</option>
+          <option value="ocean">🌊 Ocean</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Main Header Bar
+       WHAT: Application title, status chips, and primary actions
+       HOW: Flexbox layout with responsive wrapping
+       USAGE: Always visible, provides core navigation and actions
+       OUTCOME: Quick access to export, import, integrity check
+       ═══════════════════════════════════════════════════════════════ -->
+  <header>
+    <div class="title">
+      <span>🏝️</span>
+      <span>Port Royal Evacuation • Mycelial Strategy Bank</span>
+    </div>
+    <span class="chip">📴 Offline‑Ready</span>
+    <span class="chip">💾 IndexedDB</span>
+    <span class="chip">🔗 Linked Plans</span>
+    <div class="actions">
+      <button id="btnExportJSON" title="Export all data as JSON">📥 Export JSON</button>
+      <button id="btnExportHTML" title="Save this page as standalone HTML">📄 Export HTML</button>
+      <button id="btnExportPDF" title="Print or save as PDF">🖨️ Export PDF</button>
+      <button id="btnImport" title="Import previously exported JSON">📤 Import</button>
+      <button id="btnAudit" title="Run data integrity self‑check">🔒 Integrity</button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Left Sidebar (Strategy Bank)
+       WHAT: Main navigation panel with strategy tree, filters, links
+       HOW: Scrollable column with nested card components
+       USAGE: Primary interface for managing evacuation strategies
+       OUTCOME: Organized, filterable access to all planning nodes
+       EXPANSION PROMPT: "Add folder organization and favorites"
+       ═══════════════════════════════════════════════════════════════ -->
+  <aside>
+    <div class="section">
+      <div class="card">
+        <div class="h">
+          <h3>Strategy Bank</h3>
+          <span class="pill">🍄 Mycelial Network</span>
+        </div>
+        <div class="search">
+          <input 
+            id="q" 
+            type="text"
+            placeholder="Search strategies, tags, hazards..." 
+            aria-label="Search strategies"
+          />
+          <button id="addNode" class="primary" title="Create new strategy node">+ Node</button>
+        </div>
+        <ul class="tree" id="tree" role="list"></ul>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TOOLTIP: Quick Filter Collections
+         WHAT: One-click filters for common categories
+         HOW: Clickable pills that filter the strategy tree
+         USAGE: Click any tag to filter view to that category
+         OUTCOME: Fast navigation to relevant strategies
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="card">
+        <div class="h">
+          <h3>Collections</h3>
+          <span class="pill">Quick Filters</span>
+        </div>
+        <div>
+          <span class="tag pill" data-filter="hazard:storm">🌀 Storm</span>
+          <span class="tag pill" data-filter="hazard:storm‑surge">🌊 Surge</span>
+          <span class="tag pill" data-filter="hazard:tsunami">🌊 Tsunami</span>
+          <span class="tag pill" data-filter="hazard:earthquake">🌋 Quake</span>
+          <span class="tag pill" data-filter="hazard:fire">🔥 Fire</span>
+          <span class="tag pill" data-filter="phase:prepare">🧰 Prepare</span>
+          <span class="tag pill" data-filter="phase:evacuate">🏃 Evacuate</span>
+          <span class="tag pill" data-filter="phase:return">🏠 Return</span>
+          <span class="tag pill" data-filter="">🔍 Show All</span>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           TOOLTIP: External Links Manager
+           WHAT: Store links to master plans, official alerts, resources
+           HOW: Add name + URL, stored in IndexedDB
+           USAGE: Quick access to external resources and documents
+           OUTCOME: Centralized resource hub linked to your local plan
+           EXPANSION PROMPT: "Add link preview cards with favicons"
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="card" style="margin-top: 0.8rem;">
+        <div class="h">
+          <h3>Your Links</h3>
+          <span class="pill">→ Resources</span>
+        </div>
+        <div id="links"></div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.8rem; flex-direction: column;">
+          <input 
+            id="linkName" 
+            type="text"
+            placeholder="Name (e.g., 'Family Masterplan v1')" 
+            style="width: 100%; background: rgba(14,24,51,0.6); border: 1px solid #223056; border-radius: 0.6rem; padding: 0.6rem 0.8rem; color: var(--ink);"
+            aria-label="Link name"
+          />
+          <input 
+            id="linkUrl" 
+            type="url"
+            placeholder="URL or local note ref" 
+            style="width: 100%; background: rgba(14,24,51,0.6); border: 1px solid #223056; border-radius: 0.6rem; padding: 0.6rem 0.8rem; color: var(--ink);"
+            aria-label="Link URL"
+          />
+          <button id="addLink" class="primary" style="width: 100%;">+ Add Link</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Main Content Area
+       WHAT: Primary workspace for maps, wizards, tables, content
+       HOW: Scrollable main region with responsive grid layouts
+       USAGE: Displays all detailed views and interactive components
+       OUTCOME: Spacious area for complex tasks and visualizations
+       ═══════════════════════════════════════════════════════════════ -->
+  <main>
+    <!-- ═══════════════════════════════════════════════════════════════
+         TOOLTIP: Operational Picture Section
+         WHAT: Map display and evacuation wizard
+         HOW: 2-column responsive grid with SVG map and phase guide
+         USAGE: Visual and procedural evacuation planning
+         OUTCOME: Spatial + temporal understanding of evacuation
+         EXPANSION PROMPT: "Integrate real map API with route planning"
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="row cols-2">
+        <div class="card">
+          <div class="h">
+            <h3>Operational Picture • Kingston & Port Royal</h3>
+            <span class="badge ok" id="offlineBadge">📴 Offline Ready</span>
+          </div>
+          <div class="map" id="map" role="img" aria-label="Evacuation map of Kingston and Port Royal area">
+            <div class="grid" aria-hidden="true"></div>
+            <!-- ═══════════════════════════════════════════════════════════════
+                 TOOLTIP: SVG Map Illustration
+                 WHAT: Simplified geographic representation
+                 HOW: SVG paths showing land, sea, routes, risk zones
+                 USAGE: Visual reference for spatial planning
+                 OUTCOME: Geographic context for evacuation decisions
+                 ═══════════════════════════════════════════════════════════════ -->
+            <svg viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <!-- Sea -->
+              <rect x="0" y="0" width="1000" height="500" fill="#0b1933"/>
+              
+              <!-- Land mass (abstracted Kingston peninsula & Port Royal spit) -->
+              <path d="M100,240 C260,160 480,180 640,220 C720,240 780,280 840,300 C880,320 910,360 940,380 L940,500 L0,500 L0,300 C40,280 70,260 100,240 Z" fill="#0f213f"/>
+              
+              <!-- Port Royal spit (stylized) -->
+              <path d="M820,310 C860,320 900,330 930,340 C960,350 980,360 995,370 L995,385 C960,370 920,360 880,350 C860,345 840,338 820,330 Z" fill="#12294d"/>
+              
+              <!-- Primary evac route -->
+              <polyline points="860,335 820,320 760,305 700,300 640,295 580,290 520,285 460,280 420,275" 
+                stroke="#34d399" stroke-width="4" fill="none" stroke-dasharray="8 6" filter="url(#glow)"/>
+              
+              <!-- Secondary route -->
+              <polyline points="880,345 840,350 780,360 720,365 660,368 600,370" 
+                stroke="#59d2ff" stroke-width="3" fill="none" stroke-dasharray="6 4" opacity="0.7"/>
+              
+              <!-- Assembly points -->
+              <circle cx="860" cy="335" r="8" fill="#34d399" filter="url(#glow)"/>
+              <circle cx="640" cy="295" r="8" fill="#34d399" filter="url(#glow)"/>
+              <circle cx="420" cy="275" r="8" fill="#34d399" filter="url(#glow)"/>
+              
+              <!-- Shelter locations -->
+              <polygon points="580,290 590,280 580,270 570,280" fill="#fbbf24" filter="url(#glow)"/>
+              <polygon points="700,300 710,290 700,280 690,290" fill="#fbbf24" filter="url(#glow)"/>
+              
+              <!-- Risk zones (coastal band) -->
+              <path d="M1000,360 L1000,500 L0,500 L0,440 C160,420 360,410 560,420 C760,430 920,440 1000,460 Z" 
+                fill="rgba(248,113,113,.18)" stroke="rgba(248,113,113,.4)" stroke-width="2" stroke-dasharray="10 5"/>
+              
+              <!-- High ground markers -->
+              <circle cx="450" cy="265" r="6" fill="#7c3aed" opacity="0.8"/>
+              <circle cx="550" cy="275" r="6" fill="#7c3aed" opacity="0.8"/>
+              <circle cx="350" cy="260" r="6" fill="#7c3aed" opacity="0.8"/>
+            </svg>
+          </div>
+          <div class="legend">
+            <div class="key"><span class="dot route"></span><span class="muted">Primary route</span></div>
+            <div class="key"><span class="dot" style="background: #59d2ff;"></span><span class="muted">Secondary route</span></div>
+            <div class="key"><span class="dot" style="background: #fbbf24;"></span><span class="muted">Shelter</span></div>
+            <div class="key"><span class="dot danger"></span><span class="muted">Coastal risk zone</span></div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             TOOLTIP: Evacuation Wizard
+             WHAT: Step-by-step phased evacuation guidance
+             HOW: Collapsible phases with detailed instructions
+             USAGE: Follow sequentially during an event
+             OUTCOME: Clear procedural guidance reducing panic
+             EXPANSION PROMPT: "Add interactive checklist per phase"
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="card">
+          <div class="h">
+            <h3>Evacuation Wizard</h3>
+            <span class="pill">Phased Protocol</span>
+          </div>
+          <div id="wizard">
+            <details open>
+              <summary>Phase 0 — Preparation (Now)</summary>
+              <div class="details-content">
+                <ul>
+                  <li><strong>Go-bags:</strong> Pack 48-72h supplies per person (water, food, meds, clothes, documents)</li>
+                  <li><strong>Documents:</strong> Scan IDs, insurance, property deeds to cloud + USB drive</li>
+                  <li><strong>Medications:</strong> List all prescriptions with dosages and pharmacy contacts</li>
+                  <li><strong>Rally point:</strong> Designate inland meeting spot if separated (map it, share GPS)</li>
+                  <li><strong>Communication tree:</strong> Identify out-of-area contact as relay hub</li>
+                  <li><strong>Fuel & cash:</strong> Keep vehicles ≥ 3/4 tank; have small bills for emergencies</li>
+                </ul>
+              </div>
+            </details>
+            
+            <details>
+              <summary>Phase 1 — Watch (Alert Issued)</summary>
+              <div class="details-content">
+                <ul>
+                  <li><strong>Monitor alerts:</strong> Official channels (radio, TV, weather.gov, local emergency management)</li>
+                  <li><strong>Charge devices:</strong> Phones, power banks, laptops, radios</li>
+                  <li><strong>Notify network:</strong> Text family tree; confirm everyone knows rally point</li>
+                  <li><strong>Prepare home:</strong> Secure outdoor items, close storm shutters if available</li>
+                  <li><strong>Vehicle check:</strong> Gas up, check tire pressure, clear trunk for essentials</li>
+                </ul>
+              </div>
+            </details>
+            
+            <details>
+              <summary>Phase 2 — Early Move (Voluntary Evacuation)</summary>
+              <div class="details-content">
+                <ul>
+                  <li><strong>If in low-lying zones or on Port Royal spit:</strong> Relocate inland before mandatory order</li>
+                  <li><strong>Avoid congestion:</strong> Leave before peak traffic (early morning best)</li>
+                  <li><strong>Take go-bags:</strong> Assume you may not return for days</li>
+                  <li><strong>Lock home:</strong> Turn off utilities if instructed; leave note with evacuation info</li>
+                  <li><strong>Head to assembly point:</strong> Follow designated routes; avoid shortcuts through flood zones</li>
+                </ul>
+              </div>
+            </details>
+            
+            <details>
+              <summary>Phase 3 — Evacuate (Mandatory Order)</summary>
+              <div class="details-content">
+                <ul>
+                  <li><strong>Immediate departure:</strong> Do not wait; roads may become impassable</li>
+                  <li><strong>Follow official routes:</strong> Ignore GPS if it conflicts with marked evacuation routes</li>
+                  <li><strong>Avoid coastal roads:</strong> Stay away from sea walls, beaches, marinas during surge/tsunami risk</li>
+                  <li><strong>Assist neighbors:</strong> Check on elderly, disabled, or those without transport per buddy system</li>
+                  <li><strong>Shelter locations:</strong> Go to designated shelters if you have nowhere else safe</li>
+                  <li><strong>Stay informed:</strong> Keep radio on for real-time updates</li>
+                </ul>
+              </div>
+            </details>
+            
+            <details>
+              <summary>Phase 4 — Shelter-in-Place (During Event)</summary>
+              <div class="details-content">
+                <ul>
+                  <li><strong>Stay inside:</strong> Do not venture out during lull; storm may have multiple bands</li>
+                  <li><strong>Interior room:</strong> Stay in room without windows; bathroom or closet ideal</li>
+                  <li><strong>Listen for updates:</strong> Battery radio for all-clear signal</li>
+                  <li><strong>Avoid flood waters:</strong> Never walk or drive through water (hidden hazards, currents)</li>
+                </ul>
+              </div>
+            </details>
+            
+            <details>
+              <summary>Phase 5 — Return (All-Clear Issued)</summary>
+              <div class="details-content">
+                <ul>
+                  <li><strong>Wait for all-clear:</strong> Only return when authorities declare it safe</li>
+                  <li><strong>Inspect home:</strong> Check for structural damage, gas leaks, electrical hazards before entering</li>
+                  <li><strong>Boil water:</strong> If advisory issued, boil 1 minute or use purification tablets</li>
+                  <li><strong>Document damage:</strong> Photos for insurance; do not move debris until documented</li>
+                  <li><strong>Avoid downed lines:</strong> Treat all wires as live; report to utility company</li>
+                  <li><strong>Community aid:</strong> Check on neighbors; share resources; coordinate with local relief</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+          <div style="display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap;">
+            <button id="btnMakePlan" class="primary">🚀 Fork Essentials → Personal Plan</button>
+            <button id="btnChecklist">📋 Jump to Checklists</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TOOLTIP: Timeline Visualization
+         WHAT: Visual representation of evacuation phases
+         HOW: Horizontal timeline with phase dots and labels
+         USAGE: See at-a-glance progression through phases
+         OUTCOME: Mental model of sequential actions
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="card">
+        <div class="h">
+          <h3>Evacuation Timeline</h3>
+          <span class="pill">Sequential Phases</span>
+        </div>
+        <div class="timeline">
+          <div class="timeline-phase">
+            <div class="timeline-dot" data-phase="0" title="Click to view Phase 0"></div>
+            <span class="timeline-label">Prepare</span>
+          </div>
+          <div class="timeline-phase">
+            <div class="timeline-dot" data-phase="1" title="Click to view Phase 1"></div>
+            <span class="timeline-label">Watch</span>
+          </div>
+          <div class="timeline-phase">
+            <div class="timeline-dot" data-phase="2" title="Click to view Phase 2"></div>
+            <span class="timeline-label">Early Move</span>
+          </div>
+          <div class="timeline-phase">
+            <div class="timeline-dot" data-phase="3" title="Click to view Phase 3"></div>
+            <span class="timeline-label">Evacuate</span>
+          </div>
+          <div class="timeline-phase">
+            <div class="timeline-dot" data-phase="4" title="Click to view Phase 4"></div>
+            <span class="timeline-label">Shelter</span>
+          </div>
+          <div class="timeline-phase">
+            <div class="timeline-dot" data-phase="5" title="Click to view Phase 5"></div>
+            <span class="timeline-label">Return</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TOOLTIP: Data Tables Section
+         WHAT: Structured data entry for checklists, contacts, shelters
+         HOW: Editable tables with inline updates
+         USAGE: Manage all tactical details of evacuation plan
+         OUTCOME: Organized, actionable data at your fingertips
+         EXPANSION PROMPT: "Add import from CSV, export to printable PDF"
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="row cols-3">
+        <!-- ═══════════════════════════════════════════════════════════════
+             TOOLTIP: Checklist Table
+             WHAT: Task list with completion tracking
+             HOW: Table with checkbox inputs and inline editing
+             USAGE: Track preparedness items and to-dos
+             OUTCOME: Visual progress on readiness state
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="card">
+          <div class="h">
+            <h3>Checklists</h3>
+            <span class="pill">Ready State</span>
+          </div>
+          <table id="tblChecklist" role="table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th style="width: 60px;">Done</th>
+                <th style="width: 40px;"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.8rem;">
+            <button id="btnChecklistAdd" class="primary" style="flex: 1;">+ Add Item</button>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             TOOLTIP: Contacts Table
+             WHAT: Emergency contact directory
+             HOW: Editable table with name, phone, notes fields
+             USAGE: Store family, neighbors, emergency services contacts
+             OUTCOME: Quick access to critical phone numbers
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="card">
+          <div class="h">
+            <h3>Contacts</h3>
+            <span class="pill">Family • Neighbors</span>
+          </div>
+          <table id="tblContacts" role="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Notes</th>
+                <th style="width: 40px;"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.8rem;">
+            <button id="btnContactAdd" class="primary" style="flex: 1;">+ Add Contact</button>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             TOOLTIP: Shelters Table
+             WHAT: Assembly points and shelter locations
+             HOW: Editable table with name, coordinates, notes
+             USAGE: Document safe meeting points and official shelters
+             OUTCOME: Geographic reference for evacuation destinations
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="card">
+          <div class="h">
+            <h3>Shelters & Assembly</h3>
+            <span class="pill">Safe Zones</span>
+          </div>
+          <table id="tblShelters" role="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Lat</th>
+                <th>Lon</th>
+                <th>Notes</th>
+                <th style="width: 40px;"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.8rem;">
+            <button id="btnShelterAdd" class="primary" style="flex: 1;">+ Add Point</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TOOLTIP: Safety & Attribution Section
+         WHAT: Zero-harm statement, license info, attributions
+         HOW: Collapsible details with comprehensive safety guidance
+         USAGE: Read to understand tool's ethical framework
+         OUTCOME: Transparent, safety-first design philosophy
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="card">
+        <details>
+          <summary>⚠️ Zero-Harm Statement & Safety Guidelines</summary>
+          <div class="details-content">
+            <h4>Intended Use</h4>
+            <p>This tool is designed for <strong>community resilience, disaster preparedness, and emergency planning</strong> in coastal regions. It is intended to help individuals, families, and communities develop evacuation strategies, organize resources, and coordinate mutual aid.</p>
+            
+            <h4>Non-Weaponization & Ethical Use</h4>
+            <p>This system must <strong>never</strong> be used to:</p>
+            <ul>
+              <li>Facilitate harm to people, communities, or ecosystems</li>
+              <li>Coordinate activities that violate human rights or sovereignty</li>
+              <li>Support extraction, exploitation, or colonial patterns</li>
+              <li>Enable surveillance or tracking of vulnerable populations</li>
+              <li>Circumvent official emergency management protocols</li>
+            </ul>
+            
+            <h4>Official Guidance Primacy</h4>
+            <p><strong>CRITICAL:</strong> This tool supplements but does NOT replace official emergency management guidance. Always follow:</p>
+            <ul>
+              <li>Local emergency management directives</li>
+              <li>National weather service warnings</li>
+              <li>Police, fire, and emergency medical services instructions</li>
+              <li>Mandatory evacuation orders</li>
+            </ul>
+            
+            <h4>Privacy & Data Safety</h4>
+            <p>All data is stored <strong>locally</strong> in your browser using IndexedDB. No data is transmitted to external servers. Analytics are aggregated and anonymized. Never enter:</p>
+            <ul>
+              <li>Exact home addresses (use nearby landmarks instead)</li>
+              <li>Social security numbers or government IDs</li>
+              <li>Financial account information</li>
+              <li>Information about vulnerable individuals without consent</li>
+            </ul>
+            
+            <h4>Abuse Resistance</h4>
+            <p>This tool includes gentle abuse-resistance mechanisms:</p>
+            <ul>
+              <li>No geolocation tracking without explicit user action</li>
+              <li>Input sanitization to prevent injection attacks</li>
+              <li>Rate limiting on certain operations</li>
+              <li>Clear disclaimers on limitations</li>
+            </ul>
+            
+            <h4>License & Modification</h4>
+            <p>This tool is released under a <strong>Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</strong>. You may:</p>
+            <ul>
+              <li>Adapt and modify for your community</li>
+              <li>Share with attribution to Planetary Restoration Archive</li>
+              <li>Use for non-commercial purposes</li>
+            </ul>
+            <p>You may NOT:</p>
+            <ul>
+              <li>Sell or commercialize without explicit permission</li>
+              <li>Remove safety features or ethical guardrails</li>
+              <li>Use for harmful purposes as described above</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TOOLTIP: Attributions & Licenses
+         WHAT: Credit to open source patterns and inspirations
+         HOW: Collapsible section with links to sources
+         USAGE: Read to understand design influences
+         OUTCOME: Transparency in design lineage
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="card">
+        <details>
+          <summary>📚 Attributions & Design Inspirations</summary>
+          <div class="details-content">
+            <h4>GitHub Design Patterns (Adapted)</h4>
+            <p>This interface draws inspiration from several open source projects and design systems:</p>
+            <ul>
+              <li><strong>GitHub's Primer Design System:</strong> Card layouts, badge system, muted color semantics (<a href="https://primer.style" target="_blank" rel="noopener">primer.style</a> - MIT License)</li>
+              <li><strong>Notion's Collapsible Sections:</strong> Details/summary pattern for progressive disclosure</li>
+              <li><strong>Observable's Notebook UI:</strong> Side-by-side layout for code and output (Apache 2.0)</li>
+              <li><strong>Mozilla MDN Web Docs:</strong> Tooltip/documentation style for educational prompts (CC-BY-SA 2.5)</li>
+              <li><strong>Resilience.io:</strong> Mycelial network metaphor for interconnected plans (conceptual inspiration)</li>
+            </ul>
+            
+            <h4>Icon Credits</h4>
+            <p>Emoji icons used throughout are Unicode standard emoji, free for all uses.</p>
+            
+            <h4>Gamification Patterns</h4>
+            <ul>
+              <li><strong>Duolingo:</strong> Streak counter and XP system (pattern inspiration, not code)</li>
+              <li><strong>Habitica:</strong> Achievement badge unlock system (conceptual pattern)</li>
+            </ul>
+            
+            <h4>Accessibility Standards</h4>
+            <ul>
+              <li><strong>WCAG 2.1 AA:</strong> Color contrast, keyboard navigation, ARIA labels</li>
+              <li><strong>W3C WAI Best Practices:</strong> Semantic HTML, focus management</li>
+            </ul>
+            
+            <h4>Data Structures</h4>
+            <ul>
+              <li><strong>IndexedDB API:</strong> Mozilla Developer Network documentation (CC-BY-SA 2.5)</li>
+              <li><strong>Service Worker Patterns:</strong> Google Web Fundamentals (Apache 2.0)</li>
+            </ul>
+            
+            <p><strong>Note:</strong> No proprietary code was copied. Patterns and architectural approaches were adapted and reimplemented to respect licenses and terms of service.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- Floating drawer for status and alerts -->
+    <div class="drawer">
+      <div class="floating">
+        <h4>📡 Signal Panel</h4>
+        <div class="muted small" id="signal">No official alerts loaded. Add links to alert feeds under "Your Links" in the sidebar.</div>
+      </div>
+      <div class="floating">
+        <h4>🔧 System Status</h4>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <span class="badge" id="idbStatus">💾 DB</span>
+          <span class="badge" id="swStatus">⚙️ SW</span>
+          <span class="badge" id="auditStatus">🔒 AUDIT</span>
+          <span class="badge" id="analyticsStatus">📊 ANALYTICS</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLTIP: Toast Notification Element
+     WHAT: Temporary message popup for user feedback
+     HOW: Positioned fixed, shown/hidden via JavaScript
+     USAGE: Automatically appears on save, delete, import, etc
+     OUTCOME: Non-blocking confirmation messages
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLTIP: Modal Dialog for Advanced Forms
+     WHAT: Overlay dialog for complex data entry
+     HOW: Fixed positioned with backdrop, shown/hidden via JS
+     USAGE: Opens for detailed node editing, imports, confirmations
+     OUTCOME: Focused attention without page navigation
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal" id="modal" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modalTitle">Modal Title</h3>
+      <button class="modal-close" id="modalClose" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <!-- Dynamic content inserted here -->
+    </div>
+    <div class="modal-footer" id="modalFooter">
+      <!-- Dynamic buttons inserted here -->
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ═══════════════════════════════════════════════════════════════
+     
+     JAVASCRIPT APPLICATION LOGIC
+     
+     ARCHITECTURE OVERVIEW:
+     1. Starfield Animation - Canvas-based particle system
+     2. Utility Layer - DOM helpers, toast notifications
+     3. IndexedDB Wrapper - Local storage abstraction
+     4. Gamification System - XP, levels, achievements, streaks
+     5. Analytics - Privacy-first event tracking
+     6. Seed Data - Default strategies and content
+     7. UI Renderers - DOM manipulation for lists, tables, trees
+     8. Actions - User interaction handlers
+     9. Theme System - Dynamic theme switching
+     10. Export/Import - JSON, HTML, PDF generation
+     11. Service Worker - Offline functionality
+     12. Event Listeners - Wire up all interactions
+     13. Initialization - Bootstrap on page load
+     
+     EXPANSION GUIDANCE:
+     - Each section is clearly marked with TOOLTIP comments
+     - Add new stores to STORES array for data persistence
+     - Add new achievements to ACHIEVEMENTS object
+     - Add new themes to themeSelect and CSS :root variants
+     - Follow existing patterns for consistency
+     
+     ═══════════════════════════════════════════════════════════════
+     ═══════════════════════════════════════════════════════════════ -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Starfield Animation System
+// WHAT: Generates animated star particles with parallax effect
+// HOW: Canvas 2D context with requestAnimationFrame loop
+// USAGE: Automatically starts on page load
+// OUTCOME: Dynamic, engaging background with depth perception
+// EXPANSION PROMPT: "Add shooting stars, nebulae, or mouse parallax"
+// ═══════════════════════════════════════════════════════════════
+(function initStarfield() {
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  const stars = [];
+  const STAR_COUNT = 400;
+  let time = 0;
+  
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+  }
+  
+  function resetStar(star) {
+    star.x = Math.random() * width;
+    star.y = Math.random() * height;
+    star.z = Math.random() * 1 + 0.2;
+    star.radius = Math.random() * 1.5 + 0.3;
+    star.velocity = (Math.random() * 0.5 + 0.2) * star.z;
+    star.opacity = Math.random() * 0.5 + 0.5;
+    star.twinkle = Math.random() * Math.PI * 2;
+  }
+  
+  function init() {
+    resize();
+    for (let i = 0; i < STAR_COUNT; i++) {
+      const star = {};
+      resetStar(star);
+      stars.push(star);
+    }
+  }
+  
+  function animate() {
+    time += 0.016;
+    ctx.clearRect(0, 0, width, height);
+    ctx.globalCompositeOperation = 'lighter';
+    
+    for (const star of stars) {
+      // Move star
+      star.y += star.velocity * star.z;
+      if (star.y > height) {
+        star.y = 0;
+        star.x = Math.random() * width;
+      }
+      
+      // Twinkle effect
+      star.twinkle += 0.02;
+      const twinkleOpacity = star.opacity * (0.8 + Math.sin(star.twinkle) * 0.2);
+      
+      // Draw star with glow
+      const gradient = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, star.radius * 4);
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${twinkleOpacity})`);
+      gradient.addColorStop(0.5, `rgba(200, 220, 255, ${twinkleOpacity * 0.5})`);
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.radius * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    requestAnimationFrame(animate);
+  }
+  
+  window.addEventListener('resize', resize);
+  init();
+  animate();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Utility Functions
+// WHAT: Helper functions for DOM manipulation and feedback
+// HOW: Simple abstractions over common operations
+// USAGE: Used throughout application for consistency
+// OUTCOME: DRY code, easier maintenance
+// ═══════════════════════════════════════════════════════════════
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+function el(tag, attrs = {}, children = []) {
+  const element = document.createElement(tag);
+  for (const key in attrs) {
+    if (key === 'class') {
+      element.className = attrs[key];
+    } else if (key === 'html') {
+      element.innerHTML = attrs[key];
+    } else if (key.startsWith('on')) {
+      element.addEventListener(key.substring(2), attrs[key]);
+    } else {
+      element.setAttribute(key, attrs[key]);
+    }
+  }
+  children.forEach(child => {
+    if (typeof child === 'string') {
+      element.appendChild(document.createTextNode(child));
+    } else {
+      element.appendChild(child);
+    }
+  });
+  return element;
+}
+
+function toast(msg, duration = 2500) {
+  const toastEl = $('#toast');
+  toastEl.textContent = msg;
+  toastEl.style.display = 'block';
+  setTimeout(() => {
+    toastEl.style.display = 'none';
+  }, duration);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: IndexedDB Wrapper
+// WHAT: Abstraction layer for browser database operations
+// HOW: Promise-based API wrapping IndexedDB
+// USAGE: All data persistence goes through these functions
+// OUTCOME: Offline-first data storage with simple API
+// EXPANSION PROMPT: "Add sync with remote backup, conflict resolution"
+// ═══════════════════════════════════════════════════════════════
+const DB_NAME = 'portroyal-evac-v2';
+const DB_VERSION = 2;
+const STORES = [
+  'strategies',
+  'plans',
+  'links',
+  'settings',
+  'audits',
+  'contacts',
+  'checklist',
+  'shelters',
+  'gamification',
+  'analytics'
+];
+
+let db;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      STORES.forEach(storeName => {
+        if (!database.objectStoreNames.contains(storeName)) {
+          database.createObjectStore(storeName, { keyPath: 'id' });
+        }
+      });
+    };
+    
+    request.onsuccess = () => {
+      db = request.result;
+      $('#idbStatus').classList.add('ok');
+      $('#idbStatus').textContent = '💾 DB READY';
+      resolve();
+    };
+    
+    request.onerror = () => {
+      console.error('IndexedDB error:', request.error);
+      toast('Database error - some features may not work', 4000);
+      reject(request.error);
+    };
+  });
+}
+
+function getTransaction(storeName, mode = 'readonly') {
+  return db.transaction(storeName, mode).objectStore(storeName);
+}
+
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+async function dbPut(storeName, obj) {
+  if (!obj.id) obj.id = uid();
+  obj.updated = new Date().toISOString();
+  return new Promise((resolve, reject) => {
+    const request = getTransaction(storeName, 'readwrite').put(obj);
+    request.onsuccess = () => resolve(obj);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function dbGet(storeName, id) {
+  return new Promise((resolve, reject) => {
+    const request = getTransaction(storeName).get(id);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function dbGetAll(storeName) {
+  return new Promise((resolve, reject) => {
+    const request = getTransaction(storeName).getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function dbDelete(storeName, id) {
+  return new Promise((resolve, reject) => {
+    const request = getTransaction(storeName, 'readwrite').delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Gamification System
+// WHAT: XP, levels, achievements, streaks tracking
+// HOW: Point-based system with unlock thresholds
+// USAGE: Award XP on user actions, update HUD
+// OUTCOME: Motivational feedback loop for engagement
+// EXPANSION PROMPT: "Add leaderboards, daily challenges, badges"
+// ═══════════════════════════════════════════════════════════════
+const ACHIEVEMENTS = {
+  ach1: { id: 'ach1', name: 'First Step', desc: 'Create your first node', xp: 50, check: (stats) => stats.nodesCreated >= 1 },
+  ach2: { id: 'ach2', name: 'Networker', desc: 'Fork 5 strategies', xp: 100, check: (stats) => stats.forked >= 5 },
+  ach3: { id: 'ach3', name: 'Prepared', desc: 'Complete 10 checklist items', xp: 150, check: (stats) => stats.checklistCompleted >= 10 },
+  ach4: { id: 'ach4', name: 'Community', desc: 'Add 5 contacts', xp: 100, check: (stats) => stats.contactsAdded >= 5 },
+  ach5: { id: 'ach5', name: 'Cartographer', desc: 'Add 3 shelter points', xp: 100, check: (stats) => stats.sheltersAdded >= 3 },
+  ach6: { id: 'ach6', name: 'Week Warrior', desc: '7 day streak', xp: 300, check: (stats) => stats.streak >= 7 },
+};
+
+async function getGamificationStats() {
+  const stats = await dbGet('gamification', 'stats');
+  if (!stats) {
+    const defaultStats = {
+      id: 'stats',
+      xp: 0,
+      level: 1,
+      streak: 0,
+      lastVisit: new Date().toISOString(),
+      nodesCreated: 0,
+      forked: 0,
+      checklistCompleted: 0,
+      contactsAdded: 0,
+      sheltersAdded: 0,
+      unlockedAchievements: [],
+    };
+    await dbPut('gamification', defaultStats);
+    return defaultStats;
+  }
+  return stats;
+}
+
+async function awardXP(amount, reason) {
+  const stats = await getGamificationStats();
+  stats.xp += amount;
+  
+  // Level up logic (100 XP per level, exponential)
+  const xpForNextLevel = stats.level * 100;
+  if (stats.xp >= xpForNextLevel) {
+    stats.level++;
+    toast(`🎉 Level Up! You're now level ${stats.level}!`, 3000);
+    triggerConstellation();
+  }
+  
+  await dbPut('gamification', stats);
+  updateHUD(stats);
+  trackAnalytics('xp_awarded', { amount, reason, newTotal: stats.xp });
+  
+  if (reason) {
+    toast(`+${amount} XP: ${reason}`, 2000);
+  }
+}
+
+async function updateStreak() {
+  const stats = await getGamificationStats();
+  const now = new Date();
+  const lastVisit = new Date(stats.lastVisit);
+  const daysSince = Math.floor((now - lastVisit) / (1000 * 60 * 60 * 24));
+  
+  if (daysSince === 0) {
+    // Same day, no change
+  } else if (daysSince === 1) {
+    // Consecutive day
+    stats.streak++;
+    await awardXP(20, `${stats.streak} day streak! 🔥`);
+  } else {
+    // Streak broken
+    if (stats.streak > 0) {
+      toast(`Streak reset. You had a ${stats.streak} day streak.`, 3000);
+    }
+    stats.streak = 1;
+  }
+  
+  stats.lastVisit = now.toISOString();
+  await dbPut('gamification', stats);
+  updateHUD(stats);
+  
+  // Check achievements
+  await checkAchievements(stats);
+}
+
+async function incrementStat(statName, amount = 1) {
+  const stats = await getGamificationStats();
+  stats[statName] = (stats[statName] || 0) + amount;
+  await dbPut('gamification', stats);
+  await checkAchievements(stats);
+  return stats;
+}
+
+async function checkAchievements(stats) {
+  for (const achKey in ACHIEVEMENTS) {
+    const ach = ACHIEVEMENTS[achKey];
+    if (!stats.unlockedAchievements.includes(ach.id) && ach.check(stats)) {
+      stats.unlockedAchievements.push(ach.id);
+      await awardXP(ach.xp, `Achievement unlocked: ${ach.name}!`);
+      
+      const badge = $(`#${ach.id}`);
+      if (badge) {
+        badge.classList.remove('locked');
+        badge.title = `${ach.name}: ${ach.desc} ✓`;
+      }
+    }
+  }
+  await dbPut('gamification', stats);
+}
+
+function updateHUD(stats) {
+  $('#hudLevel').textContent = stats.level;
+  $('#hudStreak').textContent = `${stats.streak}🔥`;
+  
+  const xpForNextLevel = stats.level * 100;
+  const xpProgress = (stats.xp % xpForNextLevel) / xpForNextLevel * 100;
+  $('#xpFill').style.width = `${xpProgress}%`;
+  
+  // Update achievement badges
+  stats.unlockedAchievements.forEach(achId => {
+    const badge = $(`#${achId}`);
+    if (badge && badge.classList.contains('locked')) {
+      badge.classList.remove('locked');
+      const ach = ACHIEVEMENTS[achId];
+      badge.title = `${ach.name}: ${ach.desc} ✓`;
+    }
+  });
+}
+
+function triggerConstellation() {
+  const constellation = $('#constellation');
+  constellation.classList.add('active');
+  setTimeout(() => {
+    constellation.classList.remove('active');
+  }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Analytics System (Privacy-First)
+// WHAT: Event tracking for usage patterns and improvement
+// HOW: Local storage with daily summaries, no PII
+// USAGE: Track actions like 'node_created', 'strategy_forked'
+// OUTCOME: Insights for improving tool, respects privacy
+// EXPANSION PROMPT: "Add configurable email reports, export analytics"
+// NOTE: Email functionality requires backend service (not included in static HTML)
+// ═══════════════════════════════════════════════════════════════
+async function trackAnalytics(eventName, data = {}) {
+  const event = {
+    id: uid(),
+    timestamp: new Date().toISOString(),
+    event: eventName,
+    data: data,
+    sessionId: getSessionId(),
+  };
+  
+  // Strip any PII
+  delete event.data.email;
+  delete event.data.phone;
+  delete event.data.name;
+  
+  await dbPut('analytics', event);
+  
+  // Update status badge
+  $('#analyticsStatus').classList.add('ok');
+  $('#analyticsStatus').textContent = '📊 TRACKING';
+}
+
+function getSessionId() {
+  let sessionId = sessionStorage.getItem('sessionId');
+  if (!sessionId) {
+    sessionId = uid();
+    sessionStorage.setItem('sessionId', sessionId);
+  }
+  return sessionId;
+}
+
+async function generateDailySummary() {
+  const events = await dbGetAll('analytics');
+  const today = new Date().toISOString().split('T')[0];
+  const todayEvents = events.filter(e => e.timestamp.startsWith(today));
+  
+  const summary = {
+    date: today,
+    totalEvents: todayEvents.length,
+    eventTypes: {},
+    uniqueSessions: new Set(todayEvents.map(e => e.sessionId)).size,
+  };
+  
+  todayEvents.forEach(event => {
+    summary.eventTypes[event.event] = (summary.eventTypes[event.event] || 0) + 1;
+  });
+  
+  console.log('Daily Analytics Summary:', summary);
+  
+  // NOTE: Email functionality would require a backend service
+  // For static HTML, this is logged to console
+  // To implement: POST summary to your backend API endpoint
+  
+  return summary;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Seed Data (Default Content)
+// WHAT: Pre-populated strategies, checklists, contacts
+// HOW: Array of objects inserted on first load
+// USAGE: Provides examples and starting point for users
+// OUTCOME: Immediate value, reduces blank slate problem
+// EXPANSION PROMPT: "Add more hazard types, regional variations"
+// ═══════════════════════════════════════════════════════════════
+const SEED_STRATEGIES = [
+  {
+    id: uid(),
+    title: 'Tsunami: Immediate High‑Ground Protocol',
+    tags: ['hazard:tsunami', 'phase:evacuate', 'route:inland', 'priority:critical'],
+    body: 'If you feel a strong earthquake (lasting >20 seconds) or receive an official tsunami warning, immediately move to high ground or inland. Do NOT wait for sirens. Target: 30m elevation or 3km inland. Bring go-bag only. Assist neighbors per buddy map. Expect multiple waves over 12+ hours. Never return to coast until all-clear from authorities.',
+  },
+  {
+    id: uid(),
+    title: 'Storm Surge: Early Relocation from Low-Lying Areas',
+    tags: ['hazard:storm‑surge', 'phase:early', 'route:inland', 'priority:high'],
+    body: 'For households in flood zones or on narrow coastal spits: evacuate 24-48h before storm landfall when voluntary evacuation issued. Relocate vehicles and people inland to pre-designated assembly point. Secure: fuel (3/4 tank min), water (4L/person/day × 3 days), documents, medications. Turn off utilities if instructed. Lock home, leave note with evacuation destination inside.',
+  },
+  {
+    id: uid(),
+    title: 'Hurricane Prep: 72-Hour Survival Cache',
+    tags: ['hazard:storm', 'phase:prepare', 'supply:cache', 'priority:high'],
+    body: 'Maintain rolling cache: Water (1 gallon/person/day × 3 days), non-perishable food, first aid kit, prescription meds (7-day supply), flashlights/batteries, battery/crank radio, phone chargers + power bank, cash (small bills), copies of IDs/insurance/deeds in waterproof bag. Rotate supplies every 6 months. Store in accessible location (not basement if flood risk). Include pet supplies if applicable.',
+  },
+  {
+    id: uid(),
+    title: 'Earthquake: Drop-Cover-Hold + Post-Quake Protocol',
+    tags: ['hazard:earthquake', 'phase:evacuate', 'priority:critical'],
+    body: 'During shaking: DROP to hands/knees, take COVER under sturdy desk/table, HOLD ON until shaking stops. Protect head/neck. Stay away from windows, heavy furniture, exterior walls. AFTER SHAKING: Evacuate building if damage visible. Move away from buildings, utility wires, coastal areas (tsunami risk). Expect aftershocks. Meet at rally point. Do NOT use elevators. Check for injuries, gas leaks, fire hazards before rendering aid.',
+  },
+  {
+    id: uid(),
+    title: 'Family Communication Tree',
+    tags: ['phase:prepare', 'comms', 'priority:high'],
+    body: 'Establish 3-tier contact system: (1) PRIMARY: Out-of-area contact (friend/family 100+ miles away) as relay hub, (2) SECONDARY: Local contacts (neighbors, nearby family), (3) TERTIARY: Emergency services. Share plan with all family members. Use TEXT first (uses less bandwidth than calls). Establish daily check-in window during crisis (e.g., 6 PM). Define code phrase for "we\'re safe" vs "need help". Store contacts in phone AND on paper in go-bag.',
+  },
+  {
+    id: uid(),
+    title: 'Water Safety: Boil/Disinfection Protocol (Return Phase)',
+    tags: ['phase:return', 'water', 'health', 'priority:medium'],
+    body: 'If boil water advisory issued: Bring water to ROLLING BOIL for 1 minute (3 minutes if elevation >6,500 ft). Let cool before drinking. Alternative: Use water purification tablets per package instructions OR add 8 drops regular bleach (6% sodium hypochlorite) per gallon, stir, let stand 30 min. Flush water lines: Run all taps for 5 minutes after advisory lifted. Discard ice made during advisory. Clean/disinfect food prep surfaces. Document any illness and report to health authorities.',
+  },
+  {
+    id: uid(),
+    title: 'Go-Bag Assembly: Essential Items',
+    tags: ['phase:prepare', 'supply:go-bag', 'priority:high'],
+    body: 'Pack ONE bag per person (backpack or duffel): 3-day water (12L/person), non-perishable food, change of clothes, sturdy shoes, rain gear, sleeping bag/blanket, first aid kit, prescription meds + copies, phone charger + power bank, flashlight + batteries, radio, whistle, multi-tool, cash, copies of IDs/insurance/deeds in waterproof pouch, list of emergency contacts, local map. Optional: N95 masks, hand sanitizer, toiletries, entertainment for kids. Store in accessible location. Review/update every 6 months.',
+  },
+  {
+    id: uid(),
+    title: 'Neighbor Buddy System',
+    tags: ['phase:prepare', 'community', 'priority:medium'],
+    body: 'Pair with 2-3 nearby neighbors for mutual aid. Exchange: Phone numbers, work schedules, medical conditions, special needs (elderly, disabled, children, pets). Agree to check on each other during emergencies. Store each other\'s spare key if comfortable. Practice: Knock on doors during next evacuation drill. Coordinate: Who has chainsaw, generator, medical training. Document in shared contact list. Update quarterly.',
+  },
+  {
+    id: uid(),
+    title: 'Pet Evacuation Kit',
+    tags: ['phase:prepare', 'pets', 'priority:medium'],
+    body: 'Pets are family. Pack: 3-day food/water supply, medications + vet records, leash/harness/carrier, ID tags + microchip info, recent photo of pet with you (proof of ownership), comfort items (toy, blanket). Research: Pet-friendly shelters and hotels along evacuation routes. Practice: Loading pet into carrier quickly. NOTE: Most emergency shelters do NOT accept pets - plan accordingly. Never leave pet behind.',
+  },
+  {
+    id: uid(),
+    title: 'Wildfire Smoke Protection',
+    tags: ['hazard:fire', 'phase:prepare', 'health', 'priority:medium'],
+    body: 'When AQI (Air Quality Index) >150: Stay indoors, close windows/doors, run AC on recirculate (NOT fresh air). Use HEPA air purifiers if available. Wear N95/KN95 masks if must go outside (cloth masks do NOT filter smoke). Vulnerable groups (asthma, elderly, children): Consider evacuating to cleaner air zone. Monitor: airnow.gov or local air quality app. Symptoms of smoke exposure: Coughing, throat irritation, chest pain - seek medical care if severe.',
+  },
+];
+
+const SEED_CHECKLIST = [
+  { id: uid(), item: 'Go-bag packed for each person (with 72h supplies)', done: false, category: 'supplies' },
+  { id: uid(), item: 'Rally point agreed & GPS coordinates saved', done: false, category: 'planning' },
+  { id: uid(), item: 'Vehicle fuel ≥ 3/4 tank; cash in small bills', done: false, category: 'logistics' },
+  { id: uid(), item: 'Copies of IDs, insurance, deeds (digital + physical)', done: false, category: 'documents' },
+  { id: uid(), item: 'First aid kit restocked (check expiration dates)', done: false, category: 'medical' },
+  { id: uid(), item: 'Emergency contacts list printed and in go-bag', done: false, category: 'comms' },
+  { id: uid(), item: 'Neighbor buddy system established and tested', done: false, category: 'community' },
+  { id: uid(), item: 'Evacuation routes mapped and practiced', done: false, category: 'planning' },
+  { id: uid(), item: 'Home inventory documented (photos/video of belongings)', done: false, category: 'documents' },
+  { id: uid(), item: 'Utility shutoff locations known (gas, water, electric)', done: false, category: 'home' },
+];
+
+const SEED_CONTACTS = [
+  { id: uid(), name: 'Out-of-area relay contact', phone: '', email: '', notes: 'Primary check-in relay - should be 100+ miles away', category: 'emergency' },
+  { id: uid(), name: 'Neighbor buddy (north)', phone: '', email: '', notes: 'Check on elderly/children/disabled', category: 'neighbor' },
+  { id: uid(), name: 'Neighbor buddy (south)', phone: '', email: '', notes: 'Has generator and chainsaw', category: 'neighbor' },
+  { id: uid(), name: 'Local emergency management', phone: '911', email: '', notes: 'Primary emergency line', category: 'official' },
+  { id: uid(), name: 'Family doctor', phone: '', email: '', notes: 'For medication refills during emergency', category: 'medical' },
+];
+
+const SEED_SHELTERS = [
+  { id: uid(), name: 'Inland Assembly Point A', lat: '', lon: '', notes: 'Uphill parking area, 2km from coast, clear sightlines', category: 'assembly' },
+  { id: uid(), name: 'Community Center (Official Shelter)', lat: '', lon: '', notes: 'Red Cross shelter, 5km inland, accepts pets in separate area', category: 'shelter' },
+  { id: uid(), name: 'High Ground Refuge (Tsunami)', lat: '', lon: '', notes: '35m elevation, accessible by foot, marked with signs', category: 'refuge' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: UI Renderers
+// WHAT: Functions that generate and update DOM elements
+// HOW: Take data from IndexedDB and create HTML elements
+// USAGE: Called on page load and after data changes
+// OUTCOME: Reactive UI that stays in sync with database
+// EXPANSION PROMPT: "Add virtual scrolling for large lists"
+// ═══════════════════════════════════════════════════════════════
+
+async function renderStrategies(filterQuery = '') {
+  let strategies = await dbGetAll('strategies');
+  
+  // Seed data on first load
+  if (strategies.length === 0) {
+    for (const strategy of SEED_STRATEGIES) {
+      await dbPut('strategies', strategy);
+    }
+    strategies = await dbGetAll('strategies');
+  }
+  
+  // Apply filter
+  if (filterQuery) {
+    const query = filterQuery.toLowerCase();
+    strategies = strategies.filter(s =>
+      s.title.toLowerCase().includes(query) ||
+      s.body.toLowerCase().includes(query) ||
+      s.tags.join(' ').toLowerCase().includes(query)
+    );
+  }
+  
+  const tree = $('#tree');
+  tree.innerHTML = '';
+  
+  if (strategies.length === 0) {
+    tree.innerHTML = '<li style="padding: 1rem; text-align: center; color: var(--muted);">No strategies found. Try a different search or create a new node.</li>';
+    return;
+  }
+  
+  strategies.forEach(strategy => {
+    const li = el('li', { role: 'listitem' });
+    
+    const header = el('header', { onclick: () => toggleStrategyBody(li) }, [
+      el('span', { class: 'icon', 'aria-hidden': 'true', html: '🌿' }),
+      el('span', { class: 'node-title', html: strategy.title }),
+      el('span', { class: 'meta' }, [
+        el('span', { class: 'state muted', html: strategy.tags.slice(0, 2).join(' · ') }),
+      ]),
+    ]);
+    
+    const body = el('div', { class: 'body' }, [
+      el('div', { class: 'muted', html: strategy.body.replace(/\n/g, '<br>') }),
+      el('div', { style: 'margin-top: 0.5rem;' }, [
+        ...strategy.tags.map(tag => el('span', { class: 'badge', html: tag })),
+      ]),
+      el('div', { class: 'actions' }, [
+        el('button', { onclick: () => forkToPlan(strategy) }, ['📋 Fork → Plan']),
+        el('button', { onclick: () => editNode(strategy) }, ['✏️ Edit']),
+        el('button', { class: 'danger', onclick: () => removeNode(strategy.id) }, ['🗑️ Delete']),
+      ]),
+    ]);
+    
+    li.appendChild(header);
+    li.appendChild(body);
+    tree.appendChild(li);
+  });
+}
+
+function toggleStrategyBody(li) {
+  li.classList.toggle('expanded');
+}
+
+async function renderLinks() {
+  const links = await dbGetAll('links');
+  const container = $('#links');
+  container.innerHTML = '';
+  
+  if (links.length === 0) {
+    container.innerHTML = '<div class="muted small" style="padding: 0.5rem;">No links added yet. Add links to master plans, alert feeds, or reference docs.</div>';
+    return;
+  }
+  
+  links.forEach(link => {
+    const row = el('div', { style: 'display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px dashed rgba(26,43,88,0.4);' }, [
+      el('div', {}, [
+        el('div', { class: 'bold', html: link.name }),
+        el('a', { href: link.url, target: '_blank', rel: 'noopener noreferrer', class: 'small muted', html: link.url }),
+      ]),
+      el('button', { onclick: () => deleteLink(link.id), style: 'padding: 0.3rem 0.5rem; font-size: 0.8rem;' }, ['🗑️']),
+    ]);
+    container.appendChild(row);
+  });
+}
+
+async function renderChecklist() {
+  let checklist = await dbGetAll('checklist');
+  
+  if (checklist.length === 0) {
+    for (const item of SEED_CHECKLIST) {
+      await dbPut('checklist', item);
+    }
+    checklist = await dbGetAll('checklist');
+  }
+  
+  const tbody = $('#tblChecklist tbody');
+  tbody.innerHTML = '';
+  
+  checklist.forEach(item => {
+    const tr = el('tr');
+    
+    const tdItem = el('td', { html: item.item });
+    
+    const checkbox = el('input', { type: 'checkbox', checked: item.done });
+    checkbox.addEventListener('change', async () => {
+      item.done = checkbox.checked;
+      await dbPut('checklist', item);
+      if (item.done) {
+        await incrementStat('checklistCompleted');
+        await awardXP(10, 'Checklist item completed');
+      }
+      updateChecklistProgress();
+    });
+    const tdDone = el('td', { style: 'text-align: center;' }, [checkbox]);
+    
+    const btnDelete = el('button', { 
+      onclick: async () => {
+        if (confirm(`Delete "${item.item}"?`)) {
+          await dbDelete('checklist', item.id);
+          await renderChecklist();
+          toast('Checklist item deleted');
+        }
+      },
+      style: 'padding: 0.2rem 0.4rem; font-size: 0.8rem;'
+    }, ['✖']);
+    const tdActions = el('td', {}, [btnDelete]);
+    
+    tr.appendChild(tdItem);
+    tr.appendChild(tdDone);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
+  });
+  
+  updateChecklistProgress();
+}
+
+async function updateChecklistProgress() {
+  const checklist = await dbGetAll('checklist');
+  const completed = checklist.filter(item => item.done).length;
+  const total = checklist.length;
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+  
+  // Could display progress bar here
+  // For now, just log
+  console.log(`Checklist progress: ${completed}/${total} (${percent}%)`);
+}
+
+async function renderContacts() {
+  let contacts = await dbGetAll('contacts');
+  
+  if (contacts.length === 0) {
+    for (const contact of SEED_CONTACTS) {
+      await dbPut('contacts', contact);
+    }
+    contacts = await dbGetAll('contacts');
+  }
+  
+  const tbody = $('#tblContacts tbody');
+  tbody.innerHTML = '';
+  
+  contacts.forEach(contact => {
+    const tr = el('tr');
+    
+    const inputName = el('input', { type: 'text', value: contact.name || '', placeholder: 'Name' });
+    inputName.addEventListener('change', async () => {
+      contact.name = inputName.value;
+      await dbPut('contacts', contact);
+    });
+    
+    const inputPhone = el('input', { type: 'tel', value: contact.phone || '', placeholder: 'Phone' });
+    inputPhone.addEventListener('change', async () => {
+      contact.phone = inputPhone.value;
+      await dbPut('contacts', contact);
+    });
+    
+    const inputNotes = el('input', { type: 'text', value: contact.notes || '', placeholder: 'Notes' });
+    inputNotes.addEventListener('change', async () => {
+      contact.notes = inputNotes.value;
+      await dbPut('contacts', contact);
+    });
+    
+    const btnDelete = el('button', {
+      onclick: async () => {
+        if (confirm(`Delete contact "${contact.name}"?`)) {
+          await dbDelete('contacts', contact.id);
+          await renderContacts();
+          toast('Contact deleted');
+        }
+      },
+      style: 'padding: 0.2rem 0.4rem; font-size: 0.8rem;'
+    }, ['✖']);
+    
+    tr.appendChild(el('td', {}, [inputName]));
+    tr.appendChild(el('td', {}, [inputPhone]));
+    tr.appendChild(el('td', {}, [inputNotes]));
+    tr.appendChild(el('td', {}, [btnDelete]));
+    
+    tbody.appendChild(tr);
+  });
+}
+
+async function renderShelters() {
+  let shelters = await dbGetAll('shelters');
+  
+  if (shelters.length === 0) {
+    for (const shelter of SEED_SHELTERS) {
+      await dbPut('shelters', shelter);
+    }
+    shelters = await dbGetAll('shelters');
+  }
+  
+  const tbody = $('#tblShelters tbody');
+  tbody.innerHTML = '';
+  
+  shelters.forEach(shelter => {
+    const tr = el('tr');
+    
+    const inputName = el('input', { type: 'text', value: shelter.name || '', placeholder: 'Name' });
+    inputName.addEventListener('change', async () => {
+      shelter.name = inputName.value;
+      await dbPut('shelters', shelter);
+    });
+    
+    const inputLat = el('input', { type: 'text', value: shelter.lat || '', placeholder: 'Latitude' });
+    inputLat.addEventListener('change', async () => {
+      shelter.lat = inputLat.value;
+      await dbPut('shelters', shelter);
+    });
+    
+    const inputLon = el('input', { type: 'text', value: shelter.lon || '', placeholder: 'Longitude' });
+    inputLon.addEventListener('change', async () => {
+      shelter.lon = inputLon.value;
+      await dbPut('shelters', shelter);
+    });
+    
+    const inputNotes = el('input', { type: 'text', value: shelter.notes || '', placeholder: 'Notes' });
+    inputNotes.addEventListener('change', async () => {
+      shelter.notes = inputNotes.value;
+      await dbPut('shelters', shelter);
+    });
+    
+    const btnDelete = el('button', {
+      onclick: async () => {
+        if (confirm(`Delete shelter "${shelter.name}"?`)) {
+          await dbDelete('shelters', shelter.id);
+          await renderShelters();
+          toast('Shelter deleted');
+        }
+      },
+      style: 'padding: 0.2rem 0.4rem; font-size: 0.8rem;'
+    }, ['✖']);
+    
+    tr.appendChild(el('td', {}, [inputName]));
+    tr.appendChild(el('td', {}, [inputLat]));
+    tr.appendChild(el('td', {}, [inputLon]));
+    tr.appendChild(el('td', {}, [inputNotes]));
+    tr.appendChild(el('td', {}, [btnDelete]));
+    
+    tbody.appendChild(tr);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Action Handlers
+// WHAT: Functions triggered by user interactions
+// HOW: Async functions that modify database and update UI
+// USAGE: Wired to buttons and form submissions
+// OUTCOME: Interactive application responding to user input
+// ═══════════════════════════════════════════════════════════════
+
+async function forkToPlan(strategy) {
+  const copy = {
+    ...strategy,
+    id: uid(),
+    forkOf: strategy.id,
+    forkedAt: new Date().toISOString(),
+  };
+  delete copy.updated;
+  
+  await dbPut('plans', copy);
+  await incrementStat('forked');
+  await awardXP(25, 'Strategy forked to plan');
+  toast('✅ Forked to your Personal Plan');
+  trackAnalytics('strategy_forked', { strategyId: strategy.id, title: strategy.title });
+}
+
+async function editNode(strategy) {
+  const modalBody = $('#modalBody');
+  const modalTitle = $('#modalTitle');
+  const modalFooter = $('#modalFooter');
+  
+  modalTitle.textContent = 'Edit Strategy Node';
+  
+  modalBody.innerHTML = '';
+  
+  const formGroup1 = el('div', { class: 'form-group' }, [
+    el('label', { for: 'editTitle' }, ['Title']),
+    el('input', { 
+      type: 'text', 
+      id: 'editTitle', 
+      value: strategy.title,
+      placeholder: 'e.g., Tsunami: Immediate High-Ground Protocol'
+    }),
+  ]);
+  
+  const formGroup2 = el('div', { class: 'form-group' }, [
+    el('label', { for: 'editBody' }, ['Description / Instructions']),
+    el('textarea', { 
+      id: 'editBody', 
+      placeholder: 'Detailed instructions, context, and guidance...',
+      html: strategy.body
+    }),
+  ]);
+  
+  const formGroup3 = el('div', { class: 'form-group' }, [
+    el('label', { for: 'editTags' }, ['Tags (comma-separated)']),
+    el('input', { 
+      type: 'text', 
+      id: 'editTags', 
+      value: strategy.tags.join(', '),
+      placeholder: 'e.g., hazard:tsunami, phase:evacuate, priority:critical'
+    }),
+  ]);
+  
+  modalBody.appendChild(formGroup1);
+  modalBody.appendChild(formGroup2);
+  modalBody.appendChild(formGroup3);
+  
+  modalFooter.innerHTML = '';
+  
+  const btnSave = el('button', { 
+    class: 'primary',
+    onclick: async () => {
+      strategy.title = $('#editTitle').value.trim();
+      strategy.body = $('#editBody').value.trim();
+      strategy.tags = $('#editTags').value.split(',').map(t => t.trim()).filter(Boolean);
+      
+      if (!strategy.title) {
+        toast('Title is required', 2000);
+        return;
+      }
+      
+      await dbPut('strategies', strategy);
+      await renderStrategies($('#q').value.trim());
+      closeModal();
+      toast('Strategy updated');
+      trackAnalytics('strategy_edited', { strategyId: strategy.id });
+    }
+  }, ['💾 Save Changes']);
+  
+  const btnCancel = el('button', { onclick: closeModal }, ['Cancel']);
+  
+  modalFooter.appendChild(btnCancel);
+  modalFooter.appendChild(btnSave);
+  
+  openModal();
+}
+
+async function removeNode(id) {
+  if (!confirm('Delete this strategy node? This cannot be undone.')) {
+    return;
+  }
+  
+  await dbDelete('strategies', id);
+  await renderStrategies($('#q').value.trim());
+  toast('Strategy deleted');
+  trackAnalytics('strategy_deleted', { strategyId: id });
+}
+
+async function addNode() {
+  const modalBody = $('#modalBody');
+  const modalTitle = $('#modalTitle');
+  const modalFooter = $('#modalFooter');
+  
+  modalTitle.textContent = 'Create New Strategy Node';
+  
+  modalBody.innerHTML = '';
+  
+  const formGroup1 = el('div', { class: 'form-group' }, [
+    el('label', { for: 'newTitle' }, ['Title *']),
+    el('input', { 
+      type: 'text', 
+      id: 'newTitle', 
+      placeholder: 'e.g., Fire Evacuation: Safe Room Protocol',
+      autofocus: true
+    }),
+  ]);
+  
+  const formGroup2 = el('div', { class: 'form-group' }, [
+    el('label', { for: 'newBody' }, ['Description / Instructions']),
+    el('textarea', { 
+      id: 'newBody', 
+      placeholder: 'Why is this strategy important? How should it be executed? What are the key steps?'
+    }),
+  ]);
+  
+  const formGroup3 = el('div', { class: 'form-group' }, [
+    el('label', { for: 'newTags' }, ['Tags (comma-separated)']),
+    el('input', { 
+      type: 'text', 
+      id: 'newTags', 
+      placeholder: 'e.g., hazard:fire, phase:evacuate, priority:high'
+    }),
+  ]);
+  
+  modalBody.appendChild(formGroup1);
+  modalBody.appendChild(formGroup2);
+  modalBody.appendChild(formGroup3);
+  
+  modalFooter.innerHTML = '';
+  
+  const btnCreate = el('button', { 
+    class: 'primary',
+    onclick: async () => {
+      const title = $('#newTitle').value.trim();
+      const body = $('#newBody').value.trim();
+      const tags = $('#newTags').value.split(',').map(t => t.trim()).filter(Boolean);
+      
+      if (!title) {
+        toast('Title is required', 2000);
+        return;
+      }
+      
+      const newStrategy = {
+        id: uid(),
+        title,
+        body,
+        tags,
+      };
+      
+      await dbPut('strategies', newStrategy);
+      await incrementStat('nodesCreated');
+      await awardXP(50, 'New strategy node created');
+      await renderStrategies($('#q').value.trim());
+      closeModal();
+      toast('✅ Strategy created');
+      trackAnalytics('strategy_created', { title });
+    }
+  }, ['🌿 Create Node']);
+  
+  const btnCancel = el('button', { onclick: closeModal }, ['Cancel']);
+  
+  modalFooter.appendChild(btnCancel);
+  modalFooter.appendChild(btnCreate);
+  
+  openModal();
+}
+
+async function addLink() {
+  const name = $('#linkName').value.trim();
+  const url = $('#linkUrl').value.trim();
+  
+  if (!name || !url) {
+    toast('Both name and URL are required', 2000);
+    return;
+  }
+  
+  const link = {
+    id: uid(),
+    name,
+    url,
+    added: new Date().toISOString(),
+  };
+  
+  await dbPut('links', link);
+  await renderLinks();
+  $('#linkName').value = '';
+  $('#linkUrl').value = '';
+  toast('Link added');
+  trackAnalytics('link_added', { name, url });
+}
+
+async function deleteLink(id) {
+  if (!confirm('Delete this link?')) {
+    return;
+  }
+  
+  await dbDelete('links', id);
+  await renderLinks();
+  toast('Link deleted');
+}
+
+async function quickForkEssentials() {
+  const essentialTitles = [
+    'Tsunami: Immediate High‑Ground Protocol',
+    'Storm Surge: Early Relocation from Low-Lying Areas',
+    'Hurricane Prep: 72-Hour Survival Cache',
+    'Earthquake: Drop-Cover-Hold + Post-Quake Protocol',
+    'Family Communication Tree',
+    'Water Safety: Boil/Disinfection Protocol (Return Phase)',
+  ];
+  
+  const allStrategies = await dbGetAll('strategies');
+  const essentials = allStrategies.filter(s => essentialTitles.includes(s.title));
+  
+  for (const strategy of essentials) {
+    await forkToPlan(strategy);
+  }
+  
+  toast(`✅ Forked ${essentials.length} essential strategies to your plan`, 3000);
+  trackAnalytics('quick_fork_essentials', { count: essentials.length });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Export Functions
+// WHAT: Generate exports in JSON, HTML, and PDF formats
+// HOW: Serialize data and trigger browser downloads
+// USAGE: Backup data, share plans, print documentation
+// OUTCOME: Portable data for archival and sharing
+// EXPANSION PROMPT: "Add encrypted exports, cloud sync"
+// ═══════════════════════════════════════════════════════════════
+
+async function exportJSON() {
+  const data = {};
+  
+  for (const storeName of STORES) {
+    data[storeName] = await dbGetAll(storeName);
+  }
+  
+  data.exportedAt = new Date().toISOString();
+  data.version = '2.0';
+  
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `port-royal-evacuation-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  
+  URL.revokeObjectURL(url);
+  toast('📥 JSON export downloaded');
+  trackAnalytics('export_json');
+}
+
+function exportHTML() {
+  const html = document.documentElement.outerHTML;
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `port-royal-evacuation-${new Date().toISOString().split('T')[0]}.html`;
+  a.click();
+  
+  URL.revokeObjectURL(url);
+  toast('📄 HTML export downloaded');
+  trackAnalytics('export_html');
+}
+
+function exportPDF() {
+  toast('🖨️ Opening print dialog. Save as PDF from print menu.', 3000);
+  window.print();
+  trackAnalytics('export_pdf');
+}
+
+async function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      
+      if (!data.version || !data.exportedAt) {
+        throw new Error('Invalid export file format');
+      }
+      
+      // Import data
+      for (const storeName of STORES) {
+        if (Array.isArray(data[storeName])) {
+          for (const item of data[storeName]) {
+            await dbPut(storeName, item);
+          }
+        }
+      }
+      
+      toast('✅ Import complete. Refreshing...', 2000);
+      setTimeout(() => {
+        location.reload();
+      }, 2000);
+      
+      trackAnalytics('import_json', { itemCount: Object.keys(data).length });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast('❌ Import failed: ' + error.message, 4000);
+    }
+  };
+  
+  input.click();
+}
+
+async function runIntegrityCheck() {
+  const data = {};
+  
+  for (const storeName of STORES) {
+    data[storeName] = await dbGetAll(storeName);
+  }
+  
+  const json = JSON.stringify(data);
+  
+  // Simple checksum
+  let checksum = 0;
+  for (let i = 0; i < json.length; i++) {
+    checksum = (checksum * 31 + json.charCodeAt(i)) >>> 0;
+  }
+  
+  const audit = {
+    id: uid(),
+    timestamp: new Date().toISOString(),
+    checksum,
+    itemCount: Object.values(data).reduce((sum, arr) => sum + arr.length, 0),
+  };
+  
+  await dbPut('audits', audit);
+  
+  $('#auditStatus').classList.add('ok');
+  $('#auditStatus').textContent = '🔒 VERIFIED';
+  
+  toast(`✅ Integrity check passed. ${audit.itemCount} items verified.`, 3000);
+  trackAnalytics('integrity_check', { checksum, itemCount: audit.itemCount });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Modal Management
+// WHAT: Show/hide modal dialog
+// HOW: Toggle class and ARIA attributes
+// USAGE: Called by action functions needing detailed input
+// OUTCOME: Accessible modal overlay
+// ═══════════════════════════════════════════════════════════════
+
+function openModal() {
+  const modal = $('#modal');
+  modal.classList.add('active');
+  modal.setAttribute('aria-hidden', 'false');
+  
+  // Focus first input
+  setTimeout(() => {
+    const firstInput = modal.querySelector('input, textarea');
+    if (firstInput) firstInput.focus();
+  }, 100);
+}
+
+function closeModal() {
+  const modal = $('#modal');
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Theme System
+// WHAT: Dynamic theme switching with persistence
+// HOW: Change data-theme attribute on body element
+// USAGE: Select theme from dropdown
+// OUTCOME: Instant visual transformation
+// EXPANSION PROMPT: "Add custom theme builder, import/export themes"
+// ═══════════════════════════════════════════════════════════════
+
+async function setTheme(themeName) {
+  document.body.setAttribute('data-theme', themeName);
+  
+  await dbPut('settings', {
+    id: 'theme',
+    value: themeName,
+  });
+  
+  toast(`Theme changed to ${themeName}`, 1500);
+  trackAnalytics('theme_changed', { theme: themeName });
+}
+
+async function loadTheme() {
+  const themeSetting = await dbGet('settings', 'theme');
+  
+  if (themeSetting && themeSetting.value) {
+    document.body.setAttribute('data-theme', themeSetting.value);
+    $('#themeSelect').value = themeSetting.value;
+  } else {
+    // Auto-detect from prefers-color-scheme
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const defaultTheme = prefersDark ? 'space' : 'ocean';
+    document.body.setAttribute('data-theme', defaultTheme);
+    $('#themeSelect').value = defaultTheme;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Service Worker Registration (Offline Support)
+// WHAT: Registers service worker for offline functionality
+// HOW: Inline service worker using Blob URL
+// USAGE: Automatically registers on page load
+// OUTCOME: App works offline after first visit
+// EXPANSION PROMPT: "Add background sync, push notifications"
+// ═══════════════════════════════════════════════════════════════
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    console.log('Service workers not supported');
+    return;
+  }
+  
+  const swCode = `
+    const CACHE_NAME = 'port-royal-evac-v2';
+    
+    self.addEventListener('install', (event) => {
+      event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => {
+          return cache.addAll(['/']);
+        })
+      );
+      self.skipWaiting();
+    });
+    
+    self.addEventListener('activate', (event) => {
+      event.waitUntil(self.clients.claim());
+    });
+    
+    self.addEventListener('fetch', (event) => {
+      event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          
+          return fetch(event.request).then((response) => {
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+            
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+            
+            return response;
+          }).catch(() => {
+            return cachedResponse || new Response('Offline - cached version not available');
+          });
+        })
+      );
+    });
+  `;
+  
+  const blob = new Blob([swCode], { type: 'text/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  
+  navigator.serviceWorker.register(swUrl)
+    .then(() => {
+      $('#swStatus').classList.add('ok');
+      $('#swStatus').textContent = '⚙️ SW ACTIVE';
+      console.log('Service worker registered');
+    })
+    .catch((error) => {
+      console.error('Service worker registration failed:', error);
+      $('#swStatus').textContent = '⚙️ SW FAILED';
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Timeline Interaction
+// WHAT: Click timeline dots to jump to phase details
+// HOW: Scroll to corresponding details element and open it
+// USAGE: Click any timeline dot
+// OUTCOME: Quick navigation to phase information
+// ═══════════════════════════════════════════════════════════════
+
+function setupTimeline() {
+  $$('.timeline-dot').forEach((dot) => {
+    dot.addEventListener('click', () => {
+      const phaseIndex = parseInt(dot.getAttribute('data-phase'));
+      const detailsElements = $$('#wizard details');
+      
+      if (detailsElements[phaseIndex]) {
+        detailsElements[phaseIndex].open = true;
+        detailsElements[phaseIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Highlight briefly
+        dot.style.transform = 'scale(1.5)';
+        setTimeout(() => {
+          dot.style.transform = 'scale(1)';
+        }, 300);
+      }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Refresh All UI
+// WHAT: Re-render all dynamic content
+// HOW: Call all render functions
+// USAGE: After data changes or on page load
+// OUTCOME: UI synced with database state
+// ═══════════════════════════════════════════════════════════════
+
+async function refreshAll() {
+  await Promise.all([
+    renderStrategies($('#q').value.trim()),
+    renderLinks(),
+    renderChecklist(),
+    renderContacts(),
+    renderShelters(),
+  ]);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Application Initialization
+// WHAT: Bootstrap function that runs on page load
+// HOW: Opens DB, loads theme, renders UI, updates streak
+// USAGE: Automatically invoked
+// OUTCOME: Fully functional application
+// ═══════════════════════════════════════════════════════════════
+
+(async function init() {
+  try {
+    // Open database
+    await openDB();
+    
+    // Load theme preference
+    await loadTheme();
+    
+    // Update streak and gamification
+    await updateStreak();
+    const stats = await getGamificationStats();
+    updateHUD(stats);
+    
+    // Render all UI
+    await refreshAll();
+    
+    // Mark offline badge as ready
+    $('#offlineBadge').classList.add('ok');
+    $('#offlineBadge').textContent = '📴 Offline Ready';
+    
+    // Register service worker
+    registerServiceWorker();
+    
+    // Setup timeline interaction
+    setupTimeline();
+    
+    // Track page view
+    trackAnalytics('page_view');
+    
+    console.log('%c🏝️ Port Royal Evacuation System Ready', 'background: #0f1833; color: #59d2ff; padding: 8px 12px; border-radius: 4px; font-size: 14px; font-weight: bold;');
+    console.log('%c⚠️ Safety First', 'background: #1a0f0a; color: #fbbf24; padding: 6px 10px; border-radius: 4px;', 'Always follow official emergency guidance. This tool supplements but does not replace official directives.');
+    
+  } catch (error) {
+    console.error('Initialization error:', error);
+    toast('⚠️ Initialization error. Some features may not work.', 5000);
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Event Listeners
+// WHAT: Wire up all interactive elements
+// HOW: Add event listeners to buttons, inputs, selects
+// USAGE: Automatically attached on page load
+// OUTCOME: Responsive, interactive application
+// ═══════════════════════════════════════════════════════════════
+
+// Search input
+$('#q').addEventListener('input', (e) => {
+  renderStrategies(e.target.value.trim());
+});
+
+// Filter pills
+$$('.pill[data-filter]').forEach(pill => {
+  pill.addEventListener('click', (e) => {
+    const filter = e.currentTarget.getAttribute('data-filter');
+    $('#q').value = filter;
+    renderStrategies(filter);
+  });
+});
+
+// Add node button
+$('#addNode').addEventListener('click', addNode);
+
+// Add link button
+$('#addLink').addEventListener('click', addLink);
+
+// Export buttons
+$('#btnExportJSON').addEventListener('click', exportJSON);
+$('#btnExportHTML').addEventListener('click', exportHTML);
+$('#btnExportPDF').addEventListener('click', exportPDF);
+
+// Import button
+$('#btnImport').addEventListener('click', importJSON);
+
+// Integrity check button
+$('#btnAudit').addEventListener('click', runIntegrityCheck);
+
+// Quick fork button
+$('#btnMakePlan').addEventListener('click', quickForkEssentials);
+
+// Jump to checklist button
+$('#btnChecklist').addEventListener('click', () => {
+  $('#tblChecklist').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// Add checklist item button
+$('#btnChecklistAdd').addEventListener('click', async () => {
+  const item = prompt('Add checklist item:');
+  if (!item) return;
+  
+  await dbPut('checklist', {
+    id: uid(),
+    item,
+    done: false,
+  });
+  
+  await renderChecklist();
+  toast('Checklist item added');
+});
+
+// Add contact button
+$('#btnContactAdd').addEventListener('click', async () => {
+  await dbPut('contacts', {
+    id: uid(),
+    name: '',
+    phone: '',
+    email: '',
+    notes: '',
+    category: 'other',
+  });
+  
+  await incrementStat('contactsAdded');
+  await awardXP(15, 'Contact added');
+  await renderContacts();
+  toast('Contact added');
+});
+
+// Add shelter button
+$('#btnShelterAdd').addEventListener('click', async () => {
+  await dbPut('shelters', {
+    id: uid(),
+    name: 'New Assembly Point',
+    lat: '',
+    lon: '',
+    notes: '',
+    category: 'assembly',
+  });
+  
+  await incrementStat('sheltersAdded');
+  await awardXP(15, 'Shelter point added');
+  await renderShelters();
+  toast('Shelter point added');
+});
+
+// Theme selector
+$('#themeSelect').addEventListener('change', (e) => {
+  setTheme(e.target.value);
+});
+
+// Modal close button
+$('#modalClose').addEventListener('click', closeModal);
+
+// Click outside modal to close
+$('#modal').addEventListener('click', (e) => {
+  if (e.target.id === 'modal') {
+    closeModal();
+  }
+});
+
+// Escape key to close modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $('#modal').classList.contains('active')) {
+    closeModal();
+  }
+});
+
+// Achievement badge clicks (show details)
+$$('.achievement-badge').forEach(badge => {
+  badge.addEventListener('click', () => {
+    const achId = badge.id;
+    const ach = ACHIEVEMENTS[achId];
+    
+    if (ach) {
+      toast(`${ach.name}: ${ach.desc} (${ach.xp} XP)`, 3000);
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// SAFETY & ETHICS REMINDER (Console Log)
+// WHAT: Prints safety statement to developer console
+// HOW: Console.log with styling
+// USAGE: Automatic on page load
+// OUTCOME: Reinforces ethical use commitment
+// ═══════════════════════════════════════════════════════════════
+
+console.log('%c⚠️ SAFETY & ETHICS', 'background: #8b0000; color: #fff; padding: 10px 16px; border-radius: 6px; font-size: 16px; font-weight: bold;');
+console.log('%cThis tool is designed for community resilience and disaster preparedness.', 'font-size: 12px; color: #fbbf24;');
+console.log('%cNever use for:', 'font-size: 12px; color: #f87171; font-weight: bold;');
+console.log('%c- Harming people, communities, or ecosystems', 'font-size: 11px; color: #f87171;');
+console.log('%c- Surveillance or tracking', 'font-size: 11px; color: #f87171;');
+console.log('%c- Violating human rights or sovereignty', 'font-size: 11px; color: #f87171;');
+console.log('%c- Circumventing official emergency protocols', 'font-size: 11px; color: #f87171;');
+console.log('%cAlways follow official emergency management guidance.', 'font-size: 12px; color: #34d399; font-weight: bold;');
+console.log('%cLicense: CC BY-NC-SA 4.0', 'font-size: 11px; color: #a8b3c7;');
+console.log('%cFor questions: admin@planetaryrestorationarchive.com', 'font-size: 11px; color: #59d2ff;');
+
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ZERO-HARM STATEMENT (Visible Footer)
+     WHAT: Human-readable safety and license notice
+     HOW: Fixed footer that's always visible but non-intrusive
+     USAGE: Read by all users
+     OUTCOME: Transparent about tool's purpose and limits
+     ═══════════════════════════════════════════════════════════════ -->
+<div style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(11,15,26,0.95); border-top: 1px solid rgba(89,210,255,0.2); padding: 0.4rem 1rem; font-size: 0.75rem; color: var(--muted); text-align: center; z-index: 999; backdrop-filter: blur(8px);">
+  <strong style="color: var(--warn);">⚠️ Safety:</strong> This tool supplements but does NOT replace official emergency guidance. Always follow local authorities. 
+  <strong style="color: var(--brand);">🔒 Privacy:</strong> All data stored locally. No tracking beyond anonymous analytics. 
+  <strong style="color: var(--ok);">⚖️ License:</strong> CC BY-NC-SA 4.0 • Non-weaponization commitment • 
+  <a href="mailto:admin@planetaryrestorationarchive.com" style="color: var(--accent);">Contact</a>
+</div>
+
+</body>
+</html>

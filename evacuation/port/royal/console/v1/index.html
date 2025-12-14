@@ -1,0 +1,3124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Operation: Port Royal • Emergency Preparedness RPG</title>
+<meta name="description" content="Multiplayer emergency preparedness RPG with quest system, character progression, and collaborative disaster planning." />
+<meta name="theme-color" content="#0a0e1a" />
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: CSS Variables & RPG Theme System
+   WHAT: Color schemes inspired by RPG games and sci-fi interfaces
+   HOW: CSS custom properties with multiple theme options
+   USAGE: Themes switch based on character class selection
+   OUTCOME: Immersive RPG aesthetic with thematic consistency
+   GITHUB SOURCE: Inspired by Phaser.js game framework color palettes
+   EXPANSION: "Add seasonal themes, faction-based color schemes"
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* Dark RPG Theme */
+  --bg: #0a0e1a;
+  --bg-overlay: rgba(10, 14, 26, 0.95);
+  --panel: #131824;
+  --panel-glass: rgba(19, 24, 36, 0.85);
+  --card: #1a2032;
+  --ink: #e8f0ff;
+  --muted: #9ca3b8;
+  --brand: #4fd1ff;
+  --brand-glow: rgba(79, 209, 255, 0.6);
+  --legendary: #ff8c00;
+  --epic: #a335ee;
+  --rare: #0070dd;
+  --uncommon: #1eff00;
+  --common: #9d9d9d;
+  --health: #e74c3c;
+  --mana: #3498db;
+  --stamina: #2ecc71;
+  --xp-gold: #ffd700;
+  --quest-complete: #2ecc71;
+  --quest-active: #f39c12;
+  --alert-danger: #e74c3c;
+  --alert-warning: #f39c12;
+  --alert-info: #3498db;
+  --shadow-deep: 0 10px 40px rgba(0, 0, 0, 0.8);
+  --shadow-glow: 0 0 30px var(--brand-glow);
+  --border-glow: 1px solid rgba(79, 209, 255, 0.3);
+  --grid-color: rgba(79, 209, 255, 0.08);
+  --particle-color: #4fd1ff;
+}
+
+/* Class-specific theme overrides */
+[data-class="commander"] {
+  --brand: #ffd700;
+  --brand-glow: rgba(255, 215, 0, 0.6);
+  --particle-color: #ffd700;
+}
+
+[data-class="medic"] {
+  --brand: #2ecc71;
+  --brand-glow: rgba(46, 204, 113, 0.6);
+  --particle-color: #2ecc71;
+}
+
+[data-class="engineer"] {
+  --brand: #e67e22;
+  --brand-glow: rgba(230, 126, 34, 0.6);
+  --particle-color: #e67e22;
+}
+
+[data-class="scout"] {
+  --brand: #9b59b6;
+  --brand-glow: rgba(155, 89, 182, 0.6);
+  --particle-color: #9b59b6;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Base Reset & Typography
+   WHAT: Foundation styles for consistent rendering
+   HOW: Modern CSS reset with system font stack
+   USAGE: Applied globally
+   OUTCOME: Clean baseline for RPG interface
+   ═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--bg);
+  color: var(--ink);
+  overflow: hidden;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Advanced Starfield with Layers
+   WHAT: Multi-layer parallax starfield with nebulae
+   HOW: Multiple canvas elements with different z-indexes
+   USAGE: Automatically renders on page load
+   OUTCOME: Deep space atmosphere with parallax scrolling
+   GITHUB SOURCE: Inspired by three.js examples and CodePen space scenes
+   EXPANSION: "Add black holes, wormholes, animated constellations"
+   ═══════════════════════════════════════════════════════════════ */
+#starfield-bg, #starfield-mid, #starfield-fg, #nebula-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#starfield-bg { z-index: -4; opacity: 0.4; }
+#starfield-mid { z-index: -3; opacity: 0.6; }
+#starfield-fg { z-index: -2; opacity: 0.8; }
+#nebula-layer { z-index: -5; opacity: 0.3; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Main Game Container
+   WHAT: Full-screen RPG interface container
+   HOW: Flexbox layout with HUD overlays
+   USAGE: Root container for entire game interface
+   OUTCOME: Immersive full-screen experience
+   ═══════════════════════════════════════════════════════════════ */
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: HUD Overlay System
+   WHAT: Collapsible overlay panels for game menus
+   HOW: Fixed positioned divs with glassmorphism effect
+   USAGE: Toggle visibility via HUD buttons
+   OUTCOME: Non-intrusive menu system that collapses when not needed
+   GITHUB SOURCE: Inspired by Destiny 2 and Warframe HUD systems
+   EXPANSION: "Add swipe gestures, hotkey bindings, drag-to-reposition"
+   ═══════════════════════════════════════════════════════════════ */
+.hud-panel {
+  position: fixed;
+  background: var(--panel-glass);
+  border: var(--border-glow);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-deep), var(--shadow-glow);
+  backdrop-filter: blur(20px);
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transform: translateY(-100vh);
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), opacity 0.3s ease;
+  z-index: 100;
+  scrollbar-width: thin;
+  scrollbar-color: var(--brand) transparent;
+}
+
+.hud-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hud-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hud-panel::-webkit-scrollbar-thumb {
+  background: var(--brand);
+  border-radius: 3px;
+}
+
+.hud-panel.active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.hud-panel.panel-left {
+  top: 80px;
+  left: 20px;
+  width: 400px;
+  max-width: calc(100vw - 40px);
+}
+
+.hud-panel.panel-right {
+  top: 80px;
+  right: 20px;
+  width: 380px;
+  max-width: calc(100vw - 40px);
+}
+
+.hud-panel.panel-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -150vh);
+  width: 600px;
+  max-width: calc(100vw - 40px);
+}
+
+.hud-panel.panel-center.active {
+  transform: translate(-50%, -50%);
+}
+
+.hud-panel.panel-bottom {
+  bottom: 20px;
+  left: 50%;
+  transform: translate(-50%, 200vh);
+  width: 500px;
+  max-width: calc(100vw - 40px);
+}
+
+.hud-panel.panel-bottom.active {
+  transform: translate(-50%, 0);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Top HUD Bar (Always Visible)
+   WHAT: Main navigation bar with character stats and HUD toggles
+   HOW: Fixed top bar with flexbox layout
+   USAGE: Primary navigation for game interface
+   OUTCOME: Quick access to all game systems
+   GITHUB SOURCE: Pattern from League of Legends interface
+   ═══════════════════════════════════════════════════════════════ */
+.top-hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: var(--bg-overlay);
+  border-bottom: var(--border-glow);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  z-index: 200;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.hud-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--brand);
+  text-shadow: 0 0 10px var(--brand-glow);
+}
+
+.hud-brand .icon {
+  font-size: 1.8rem;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 5px var(--brand-glow)); }
+  50% { filter: drop-shadow(0 0 15px var(--brand-glow)); }
+}
+
+.hud-nav {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.hud-btn {
+  position: relative;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, rgba(79, 209, 255, 0.1), rgba(79, 209, 255, 0.05));
+  border: 1px solid rgba(79, 209, 255, 0.3);
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.hud-btn:hover {
+  background: linear-gradient(135deg, rgba(79, 209, 255, 0.2), rgba(79, 209, 255, 0.1));
+  border-color: var(--brand);
+  box-shadow: 0 0 15px var(--brand-glow);
+  transform: translateY(-2px);
+}
+
+.hud-btn.active {
+  background: linear-gradient(135deg, var(--brand), rgba(79, 209, 255, 0.8));
+  border-color: var(--brand);
+  box-shadow: 0 0 20px var(--brand-glow);
+  color: #000;
+  font-weight: 600;
+}
+
+.hud-btn .badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--alert-danger);
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Character Stats Bar
+   WHAT: Real-time display of character vitals (HP, Mana, Stamina, XP)
+   HOW: Animated progress bars with gradient fills
+   USAGE: Updates dynamically as character progresses
+   OUTCOME: Visual feedback on character state
+   GITHUB SOURCE: Inspired by World of Warcraft unitframes
+   ═══════════════════════════════════════════════════════════════ */
+.character-stats {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.stat-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 120px;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.stat-bar-bg {
+  position: relative;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.stat-bar-fill.health {
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.6);
+}
+
+.stat-bar-fill.mana {
+  background: linear-gradient(90deg, #3498db, #2980b9);
+  box-shadow: 0 0 10px rgba(52, 152, 219, 0.6);
+}
+
+.stat-bar-fill.stamina {
+  background: linear-gradient(90deg, #2ecc71, #27ae60);
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.6);
+}
+
+.stat-bar-fill.xp {
+  background: linear-gradient(90deg, var(--xp-gold), #ff8c00);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+}
+
+.stat-value {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Character Portrait & Info
+   WHAT: Avatar display with level, class, and name
+   HOW: Circular avatar with border glow and overlay info
+   USAGE: Shows current character identity
+   OUTCOME: Personalized player identity display
+   ═══════════════════════════════════════════════════════════════ */
+.character-portrait {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.avatar-circle {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand), var(--epic));
+  border: 3px solid var(--brand);
+  box-shadow: 0 0 20px var(--brand-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.avatar-circle:hover {
+  transform: scale(1.1);
+}
+
+.level-badge {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  background: var(--xp-gold);
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+}
+
+.character-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.character-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.character-class {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Panel Header Component
+   WHAT: Reusable header for HUD panels
+   HOW: Flexbox with title, subtitle, and close button
+   USAGE: Top of every HUD panel
+   OUTCOME: Consistent panel styling
+   ═══════════════════════════════════════════════════════════════ */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(79, 209, 255, 0.2);
+}
+
+.panel-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.panel-title h2 {
+  font-size: 1.4rem;
+  color: var(--brand);
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 0 10px var(--brand-glow);
+}
+
+.panel-subtitle {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.panel-close {
+  background: rgba(231, 76, 60, 0.2);
+  border: 1px solid rgba(231, 76, 60, 0.5);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--alert-danger);
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.panel-close:hover {
+  background: rgba(231, 76, 60, 0.4);
+  box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+  transform: rotate(90deg);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Quest System UI
+   WHAT: RPG-style quest tracker with objectives and rewards
+   HOW: List of quest cards with progress bars
+   USAGE: Displays active quests and tracks completion
+   OUTCOME: Gamified task management
+   GITHUB SOURCE: Inspired by Skyrim and Fallout quest systems
+   EXPANSION: "Add quest categories, daily/weekly quests, quest chains"
+   ═══════════════════════════════════════════════════════════════ */
+.quest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.quest-card {
+  background: linear-gradient(135deg, rgba(26, 32, 50, 0.8), rgba(19, 24, 36, 0.8));
+  border: 1px solid rgba(79, 209, 255, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.quest-card:hover {
+  border-color: var(--brand);
+  box-shadow: 0 0 20px var(--brand-glow);
+  transform: translateX(5px);
+}
+
+.quest-card.complete {
+  border-color: var(--quest-complete);
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(39, 174, 96, 0.05));
+}
+
+.quest-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.8rem;
+}
+
+.quest-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quest-icon {
+  font-size: 1.2rem;
+}
+
+.quest-difficulty {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.quest-difficulty.easy {
+  background: rgba(46, 204, 113, 0.2);
+  color: var(--quest-complete);
+  border: 1px solid var(--quest-complete);
+}
+
+.quest-difficulty.medium {
+  background: rgba(243, 156, 18, 0.2);
+  color: var(--quest-active);
+  border: 1px solid var(--quest-active);
+}
+
+.quest-difficulty.hard {
+  background: rgba(231, 76, 60, 0.2);
+  color: var(--alert-danger);
+  border: 1px solid var(--alert-danger);
+}
+
+.quest-difficulty.legendary {
+  background: linear-gradient(135deg, rgba(255, 140, 0, 0.2), rgba(163, 53, 238, 0.2));
+  color: var(--legendary);
+  border: 1px solid var(--legendary);
+}
+
+.quest-description {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.8rem;
+  line-height: 1.5;
+}
+
+.quest-objectives {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.objective {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.objective-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.objective-checkbox:hover {
+  box-shadow: 0 0 10px var(--brand-glow);
+}
+
+.objective-checkbox.checked {
+  background: var(--brand);
+  box-shadow: 0 0 15px var(--brand-glow);
+}
+
+.objective-checkbox.checked::after {
+  content: '✓';
+  color: #000;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.objective-text {
+  flex: 1;
+  color: var(--ink);
+}
+
+.objective-text.completed {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.quest-progress {
+  margin-bottom: 0.8rem;
+}
+
+.progress-bar {
+  position: relative;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--epic));
+  border-radius: 10px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 15px var(--brand-glow);
+}
+
+.progress-text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  z-index: 1;
+}
+
+.quest-rewards {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(79, 209, 255, 0.1);
+}
+
+.reward {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.reward.xp {
+  color: var(--xp-gold);
+}
+
+.reward.item {
+  color: var(--rare);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Inventory System
+   WHAT: Grid-based inventory for emergency supplies
+   HOW: CSS Grid with item slots and tooltips
+   USAGE: Manage go-bag contents and supply cache
+   OUTCOME: Visual inventory management
+   GITHUB SOURCE: Inspired by Diablo and Path of Exile inventory systems
+   EXPANSION: "Add drag-and-drop, item stacking, weight limits"
+   ═══════════════════════════════════════════════════════════════ */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.inventory-slot {
+  aspect-ratio: 1;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(79, 209, 255, 0.2);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.inventory-slot:hover {
+  border-color: var(--brand);
+  box-shadow: 0 0 15px var(--brand-glow);
+  transform: scale(1.05);
+}
+
+.inventory-slot.filled {
+  background: linear-gradient(135deg, rgba(79, 209, 255, 0.1), rgba(79, 209, 255, 0.05));
+}
+
+.inventory-slot.rarity-legendary {
+  border-color: var(--legendary);
+  background: radial-gradient(circle, rgba(255, 140, 0, 0.2), transparent);
+}
+
+.inventory-slot.rarity-epic {
+  border-color: var(--epic);
+  background: radial-gradient(circle, rgba(163, 53, 238, 0.2), transparent);
+}
+
+.inventory-slot.rarity-rare {
+  border-color: var(--rare);
+  background: radial-gradient(circle, rgba(0, 112, 221, 0.2), transparent);
+}
+
+.inventory-slot.rarity-uncommon {
+  border-color: var(--uncommon);
+  background: radial-gradient(circle, rgba(30, 255, 0, 0.2), transparent);
+}
+
+.item-icon {
+  font-size: 1.8rem;
+  filter: drop-shadow(0 0 5px var(--brand-glow));
+}
+
+.item-count {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.item-tooltip {
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel-glass);
+  border: 1px solid var(--brand);
+  border-radius: 6px;
+  padding: 0.6rem;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.8);
+}
+
+.inventory-slot:hover .item-tooltip {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Skill Tree System
+   WHAT: Visual skill tree for preparedness competencies
+   HOW: Connected nodes with unlock requirements
+   USAGE: Spend skill points to unlock abilities
+   OUTCOME: RPG-style character progression
+   GITHUB SOURCE: Inspired by Path of Exile passive tree
+   EXPANSION: "Add skill synergies, prestige system, respec options"
+   ═══════════════════════════════════════════════════════════════ */
+.skill-tree {
+  position: relative;
+  padding: 2rem;
+  min-height: 400px;
+}
+
+.skill-node {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 209, 255, 0.1), transparent);
+  border: 3px solid rgba(79, 209, 255, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.skill-node:hover {
+  border-color: var(--brand);
+  box-shadow: 0 0 25px var(--brand-glow);
+  transform: scale(1.1);
+}
+
+.skill-node.unlocked {
+  background: radial-gradient(circle, var(--brand), rgba(79, 209, 255, 0.3));
+  border-color: var(--brand);
+  box-shadow: 0 0 30px var(--brand-glow);
+}
+
+.skill-node.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.skill-node-icon {
+  font-size: 1.5rem;
+}
+
+.skill-node-name {
+  position: absolute;
+  bottom: -25px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.skill-connector {
+  position: absolute;
+  height: 2px;
+  background: rgba(79, 209, 255, 0.2);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.skill-connector.active {
+  background: var(--brand);
+  box-shadow: 0 0 10px var(--brand-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Party/Team System
+   WHAT: Multiplayer party management for family/community
+   HOW: List of party members with roles and status
+   USAGE: Coordinate with family and neighbors
+   OUTCOME: Collaborative emergency preparedness
+   GITHUB SOURCE: Inspired by Final Fantasy XIV party list
+   EXPANSION: "Add voice chat integration, location sharing, emergency alerts"
+   ═══════════════════════════════════════════════════════════════ */
+.party-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.party-member {
+  background: linear-gradient(135deg, rgba(26, 32, 50, 0.6), rgba(19, 24, 36, 0.6));
+  border: 1px solid rgba(79, 209, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.party-member:hover {
+  border-color: var(--brand);
+  box-shadow: 0 0 15px var(--brand-glow);
+}
+
+.party-member.leader {
+  border-color: var(--xp-gold);
+}
+
+.party-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand), var(--epic));
+  border: 2px solid var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 0 10px var(--brand-glow);
+}
+
+.party-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.party-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.party-role {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.party-status {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.status-indicator.online {
+  background: var(--quest-complete);
+  box-shadow: 0 0 8px var(--quest-complete);
+  animation: pulse-status 2s ease-in-out infinite;
+}
+
+.status-indicator.offline {
+  background: var(--muted);
+}
+
+@keyframes pulse-status {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.party-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.party-btn {
+  padding: 0.3rem 0.6rem;
+  background: rgba(79, 209, 255, 0.1);
+  border: 1px solid rgba(79, 209, 255, 0.3);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.party-btn:hover {
+  background: rgba(79, 209, 255, 0.2);
+  border-color: var(--brand);
+  box-shadow: 0 0 10px var(--brand-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Chat/Communication System
+   WHAT: Real-time chat for party communication
+   HOW: Message list with input box
+   USAGE: Coordinate during emergencies
+   OUTCOME: Team communication interface
+   ═══════════════════════════════════════════════════════════════ */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 400px;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.chat-message {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.chat-message.self {
+  flex-direction: row-reverse;
+}
+
+.chat-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand), var(--epic));
+  border: 2px solid var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 70%;
+}
+
+.chat-message.self .chat-content {
+  align-items: flex-end;
+}
+
+.chat-username {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.chat-bubble {
+  background: rgba(79, 209, 255, 0.1);
+  border: 1px solid rgba(79, 209, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--ink);
+  word-wrap: break-word;
+}
+
+.chat-message.self .chat-bubble {
+  background: rgba(46, 204, 113, 0.1);
+  border-color: rgba(46, 204, 113, 0.2);
+}
+
+.chat-timestamp {
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.chat-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(79, 209, 255, 0.3);
+  border-radius: 6px;
+  padding: 0.6rem;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 15px var(--brand-glow);
+}
+
+.chat-send {
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, var(--brand), var(--epic));
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chat-send:hover {
+  box-shadow: 0 0 20px var(--brand-glow);
+  transform: translateY(-2px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Character Creation Screen
+   WHAT: Initial character setup with class selection
+   HOW: Modal overlay with step-by-step wizard
+   USAGE: First-time user experience
+   OUTCOME: Personalized character creation
+   ═══════════════════════════════════════════════════════════════ */
+.character-creator {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.character-creator.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.creator-panel {
+  background: var(--panel-glass);
+  border: var(--border-glow);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 600px;
+  width: calc(100vw - 40px);
+  box-shadow: var(--shadow-deep), var(--shadow-glow);
+}
+
+.creator-step {
+  display: none;
+}
+
+.creator-step.active {
+  display: block;
+  animation: slideIn 0.4s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.creator-title {
+  font-size: 1.8rem;
+  color: var(--brand);
+  margin-bottom: 0.5rem;
+  text-align: center;
+  text-shadow: 0 0 15px var(--brand-glow);
+}
+
+.creator-subtitle {
+  font-size: 1rem;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.class-selection {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.class-card {
+  background: linear-gradient(135deg, rgba(26, 32, 50, 0.6), rgba(19, 24, 36, 0.6));
+  border: 2px solid rgba(79, 209, 255, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.class-card:hover {
+  border-color: var(--brand);
+  box-shadow: 0 0 25px var(--brand-glow);
+  transform: translateY(-5px);
+}
+
+.class-card.selected {
+  border-color: var(--brand);
+  background: linear-gradient(135deg, rgba(79, 209, 255, 0.2), rgba(79, 209, 255, 0.1));
+  box-shadow: 0 0 30px var(--brand-glow);
+}
+
+.class-icon-large {
+  font-size: 3rem;
+  filter: drop-shadow(0 0 10px var(--brand-glow));
+}
+
+.class-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.class-description {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--brand);
+  margin-bottom: 0.5rem;
+}
+
+.form-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(79, 209, 255, 0.3);
+  border-radius: 6px;
+  padding: 0.8rem;
+  color: var(--ink);
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 15px var(--brand-glow);
+}
+
+.creator-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.btn {
+  padding: 0.8rem 1.5rem;
+  background: linear-gradient(135deg, rgba(79, 209, 255, 0.2), rgba(79, 209, 255, 0.1));
+  border: 1px solid rgba(79, 209, 255, 0.4);
+  border-radius: 8px;
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+}
+
+.btn:hover {
+  background: linear-gradient(135deg, rgba(79, 209, 255, 0.3), rgba(79, 209, 255, 0.2));
+  border-color: var(--brand);
+  box-shadow: 0 0 20px var(--brand-glow);
+  transform: translateY(-2px);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--brand), var(--epic));
+  border: none;
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Achievement Toast Notifications
+   WHAT: Popup notifications for unlocked achievements
+   HOW: Slide-in animation from top-right
+   USAGE: Automatically triggered on achievement unlock
+   OUTCOME: Satisfying reward feedback
+   ═══════════════════════════════════════════════════════════════ */
+.achievement-toast {
+  position: fixed;
+  top: 90px;
+  right: 20px;
+  background: linear-gradient(135deg, rgba(26, 32, 50, 0.95), rgba(19, 24, 36, 0.95));
+  border: 2px solid var(--xp-gold);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.6);
+  backdrop-filter: blur(10px);
+  transform: translateX(500px);
+  opacity: 0;
+  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 9998;
+  max-width: 350px;
+}
+
+.achievement-toast.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.achievement-toast-icon {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 0 10px var(--xp-gold));
+}
+
+.achievement-toast-content {
+  flex: 1;
+}
+
+.achievement-toast-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--xp-gold);
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.achievement-toast-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.2rem;
+}
+
+.achievement-toast-desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Loading Screen
+   WHAT: Initial loading animation
+   HOW: Full-screen overlay with animated logo
+   USAGE: Shown while app initializes
+   OUTCOME: Professional loading experience
+   ═══════════════════════════════════════════════════════════════ */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  z-index: 10000;
+  transition: opacity 0.5s ease;
+}
+
+.loading-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-logo {
+  font-size: 5rem;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 30px var(--brand-glow));
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+.loading-text {
+  font-size: 1.5rem;
+  color: var(--brand);
+  font-weight: 700;
+  text-shadow: 0 0 15px var(--brand-glow);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.loading-bar {
+  width: 300px;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(79, 209, 255, 0.3);
+}
+
+.loading-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--epic));
+  border-radius: 3px;
+  animation: loadingProgress 2s ease-in-out infinite;
+  box-shadow: 0 0 15px var(--brand-glow);
+}
+
+@keyframes loadingProgress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Responsive Design
+   WHAT: Mobile and tablet layout adaptations
+   HOW: Media queries for smaller screens
+   USAGE: Automatic on mobile devices
+   OUTCOME: Fully functional mobile experience
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .top-hud {
+    height: auto;
+    min-height: 60px;
+    flex-wrap: wrap;
+    padding: 0.8rem;
+  }
+  
+  .hud-nav {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+  
+  .character-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .stat-bar {
+    width: 100%;
+  }
+  
+  .hud-panel {
+    width: calc(100vw - 20px) !important;
+    left: 10px !important;
+    right: 10px !important;
+    max-height: 70vh;
+  }
+  
+  .inventory-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .class-selection {
+    grid-template-columns: 1fr;
+  }
+  
+  .achievement-toast {
+    right: 10px;
+    left: 10px;
+    max-width: calc(100vw - 20px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Print Styles
+   WHAT: Optimized for printing emergency plans
+   HOW: Hide HUD elements, simplify layout
+   USAGE: Automatic when printing
+   OUTCOME: Clean printable emergency reference
+   ═══════════════════════════════════════════════════════════════ */
+@media print {
+  .top-hud,
+  .hud-panel,
+  canvas,
+  .achievement-toast,
+  .loading-screen {
+    display: none !important;
+  }
+  
+  body {
+    background: #fff;
+    color: #000;
+  }
+  
+  .game-container {
+    display: block;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Accessibility Features
+   WHAT: Screen reader support and keyboard navigation
+   HOW: ARIA attributes and focus states
+   USAGE: Automatically improves accessibility
+   OUTCOME: Inclusive experience for all users
+   ═══════════════════════════════════════════════════════════════ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+*:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLTIP: Utility Classes
+   WHAT: Common helper classes
+   HOW: Single-purpose utility styles
+   USAGE: Add to elements for quick styling
+   OUTCOME: Rapid UI development
+   ═══════════════════════════════════════════════════════════════ */
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.text-muted { color: var(--muted); }
+.text-brand { color: var(--brand); }
+.text-legendary { color: var(--legendary); }
+.mb-1 { margin-bottom: 1rem; }
+.mt-1 { margin-top: 1rem; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.gap-1 { gap: 1rem; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLTIP: Loading Screen
+     WHAT: Initial app loading overlay
+     HOW: Fades out after initialization complete
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">🏝️</div>
+  <div class="loading-text">INITIALIZING OPERATION: PORT ROYAL</div>
+  <div class="loading-bar">
+    <div class="loading-bar-fill"></div>
+  </div>
+  <div class="text-muted" style="font-size: 0.9rem;">Emergency Preparedness RPG • v2.0</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLTIP: Advanced Starfield Layers
+     WHAT: Multiple canvas layers for parallax starfield effect
+     HOW: Background (slow), midground (medium), foreground (fast), nebula
+     USAGE: Automatically animated
+     OUTCOME: Deep space atmosphere with depth
+     ═══════════════════════════════════════════════════════════════ -->
+<canvas id="nebula-layer" aria-hidden="true"></canvas>
+<canvas id="starfield-bg" aria-hidden="true"></canvas>
+<canvas id="starfield-mid" aria-hidden="true"></canvas>
+<canvas id="starfield-fg" aria-hidden="true"></canvas>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLTIP: Character Creator (First-Time Experience)
+     WHAT: Character creation wizard with class selection
+     HOW: Multi-step form with name and class choice
+     USAGE: Appears on first visit
+     OUTCOME: Personalized player identity
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="character-creator" id="characterCreator">
+  <div class="creator-panel">
+    <!-- Step 1: Welcome -->
+    <div class="creator-step active" id="step1">
+      <h1 class="creator-title">Welcome to Operation: Port Royal</h1>
+      <p class="creator-subtitle">An Emergency Preparedness RPG</p>
+      <p style="color: var(--muted); text-align: center; line-height: 1.8; margin-bottom: 2rem;">
+        Transform disaster preparedness into an engaging multiplayer experience. 
+        Create your character, join a party, complete quests, and build your community's resilience together.
+      </p>
+      <div class="creator-actions">
+        <button class="btn primary" style="width: 100%;" onclick="nextStep(2)">Begin Your Journey →</button>
+      </div>
+    </div>
+    
+    <!-- Step 2: Choose Class -->
+    <div class="creator-step" id="step2">
+      <h2 class="creator-title">Choose Your Role</h2>
+      <p class="creator-subtitle">Select a class that matches your strengths</p>
+      <div class="class-selection">
+        <div class="class-card" data-class="commander" onclick="selectClass('commander')">
+          <div class="class-icon-large">👨‍✈️</div>
+          <div class="class-name">Commander</div>
+          <div class="class-description">Leadership and coordination specialist. Bonus to party management and strategy planning.</div>
+        </div>
+        <div class="class-card" data-class="medic" onclick="selectClass('medic')">
+          <div class="class-icon-large">⚕️</div>
+          <div class="class-name">Medic</div>
+          <div class="class-description">Health and first aid expert. Bonus to medical supply management and triage protocols.</div>
+        </div>
+        <div class="class-card" data-class="engineer" onclick="selectClass('engineer')">
+          <div class="class-icon-large">🔧</div>
+          <div class="class-name">Engineer</div>
+          <div class="class-description">Technical and logistics specialist. Bonus to shelter setup and equipment maintenance.</div>
+        </div>
+        <div class="class-card" data-class="scout" onclick="selectClass('scout')">
+          <div class="class-icon-large">🔍</div>
+          <div class="class-name">Scout</div>
+          <div class="class-description">Navigation and reconnaissance expert. Bonus to route planning and environmental awareness.</div>
+        </div>
+      </div>
+      <div class="creator-actions">
+        <button class="btn" onclick="nextStep(1)">← Back</button>
+        <button class="btn primary" id="classNextBtn" disabled onclick="nextStep(3)">Continue →</button>
+      </div>
+    </div>
+    
+    <!-- Step 3: Character Name -->
+    <div class="creator-step" id="step3">
+      <h2 class="creator-title">Name Your Character</h2>
+      <p class="creator-subtitle">What should we call you?</p>
+      <div class="form-group">
+        <label class="form-label" for="characterName">Character Name</label>
+        <input 
+          type="text" 
+          id="characterName" 
+          class="form-input" 
+          placeholder="Enter your character name"
+          maxlength="20"
+        />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="characterBio">Quick Bio (Optional)</label>
+        <input 
+          type="text" 
+          id="characterBio" 
+          class="form-input" 
+          placeholder="e.g., 'Father of two, ham radio enthusiast'"
+          maxlength="50"
+        />
+      </div>
+      <div class="creator-actions">
+        <button class="btn" onclick="nextStep(2)">← Back</button>
+        <button class="btn primary" onclick="finishCharacterCreation()">Start Adventure →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLTIP: Achievement Toast Notification
+     WHAT: Popup for achievement unlocks
+     HOW: Slides in from right, auto-dismisses
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="achievement-toast" id="achievementToast">
+  <div class="achievement-toast-icon">🏆</div>
+  <div class="achievement-toast-content">
+    <div class="achievement-toast-title">Achievement Unlocked!</div>
+    <div class="achievement-toast-name" id="achievementName">Achievement Name</div>
+    <div class="achievement-toast-desc" id="achievementDesc">Achievement Description</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOOLTIP: Main Game Container
+     WHAT: Primary game interface with HUD overlays
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="game-container">
+  
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Top HUD Bar
+       WHAT: Always-visible navigation and character stats
+       HOW: Fixed positioned bar with buttons and stat displays
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="top-hud">
+    <div class="hud-brand">
+      <span class="icon">🏝️</span>
+      <span>Operation: Port Royal</span>
+    </div>
+    
+    <div class="character-portrait" id="characterPortrait">
+      <div class="avatar-circle" onclick="togglePanel('characterPanel')">
+        <span id="avatarIcon">👤</span>
+        <div class="level-badge" id="levelBadge">1</div>
+      </div>
+      <div class="character-info">
+        <div class="character-name" id="characterNameDisplay">Survivor</div>
+        <div class="character-class" id="characterClassDisplay">Unassigned</div>
+      </div>
+    </div>
+    
+    <div class="character-stats">
+      <div class="stat-bar">
+        <div class="stat-label">Health</div>
+        <div class="stat-bar-bg">
+          <div class="stat-bar-fill health" id="healthBar" style="width: 100%;"></div>
+          <div class="stat-value" id="healthValue">100/100</div>
+        </div>
+      </div>
+      <div class="stat-bar">
+        <div class="stat-label">Readiness</div>
+        <div class="stat-bar-bg">
+          <div class="stat-bar-fill mana" id="readinessBar" style="width: 50%;"></div>
+          <div class="stat-value" id="readinessValue">50/100</div>
+        </div>
+      </div>
+      <div class="stat-bar">
+        <div class="stat-label">Experience</div>
+        <div class="stat-bar-bg">
+          <div class="stat-bar-fill xp" id="xpBar" style="width: 0%;"></div>
+          <div class="stat-value" id="xpValue">0/1000</div>
+        </div>
+      </div>
+    </div>
+    
+    <nav class="hud-nav">
+      <button class="hud-btn" onclick="togglePanel('questPanel')">
+        <span>📋</span>
+        <span>Quests</span>
+        <span class="badge" id="questBadge">3</span>
+      </button>
+      <button class="hud-btn" onclick="togglePanel('inventoryPanel')">
+        <span>🎒</span>
+        <span>Inventory</span>
+      </button>
+      <button class="hud-btn" onclick="togglePanel('skillPanel')">
+        <span>🌳</span>
+        <span>Skills</span>
+      </button>
+      <button class="hud-btn" onclick="togglePanel('partyPanel')">
+        <span>👥</span>
+        <span>Party</span>
+        <span class="badge" id="partyBadge" style="display: none;">!</span>
+      </button>
+      <button class="hud-btn" onclick="togglePanel('mapPanel')">
+        <span>🗺️</span>
+        <span>Map</span>
+      </button>
+      <button class="hud-btn" onclick="togglePanel('chatPanel')">
+        <span>💬</span>
+        <span>Chat</span>
+      </button>
+    </nav>
+  </div>
+  
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Quest Panel (Left Side)
+       WHAT: Active quest tracker with objectives and rewards
+       HOW: Scrollable list of quest cards
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="hud-panel panel-left" id="questPanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <h2>📋 Active Quests</h2>
+        <div class="panel-subtitle">Complete objectives to gain XP and unlock rewards</div>
+      </div>
+      <button class="panel-close" onclick="togglePanel('questPanel')">×</button>
+    </div>
+    <div class="quest-list" id="questList">
+      <!-- Quests dynamically inserted here -->
+    </div>
+  </div>
+  
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Inventory Panel (Right Side)
+       WHAT: Grid-based supply inventory
+       HOW: Visual slots for emergency supplies
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="hud-panel panel-right" id="inventoryPanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <h2>🎒 Inventory</h2>
+        <div class="panel-subtitle">Emergency supplies and equipment</div>
+      </div>
+      <button class="panel-close" onclick="togglePanel('inventoryPanel')">×</button>
+    </div>
+    <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+      <div class="text-muted" style="font-size: 0.85rem;">
+        <span id="inventoryCount">0</span> / <span id="inventoryMax">36</span> slots
+      </div>
+      <button class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" onclick="addItem()">+ Add Item</button>
+    </div>
+    <div class="inventory-grid" id="inventoryGrid">
+      <!-- Inventory slots dynamically inserted here -->
+    </div>
+  </div>
+  
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Skill Tree Panel (Center)
+       WHAT: Visual skill progression system
+       HOW: Connected nodes showing unlockable abilities
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="hud-panel panel-center" id="skillPanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <h2>🌳 Skill Tree</h2>
+        <div class="panel-subtitle">Spend points to unlock preparedness abilities</div>
+      </div>
+      <button class="panel-close" onclick="togglePanel('skillPanel')">×</button>
+    </div>
+    <div style="margin-bottom: 1rem; text-align: center;">
+      <div class="text-brand" style="font-size: 1.2rem; font-weight: 700;">
+        <span id="skillPoints">0</span> Skill Points Available
+      </div>
+    </div>
+    <div class="skill-tree" id="skillTree">
+      <!-- Skill nodes dynamically inserted here -->
+    </div>
+  </div>
+  
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Party Panel (Right Side)
+       WHAT: Multiplayer party management
+       HOW: List of party members with status
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="hud-panel panel-right" id="partyPanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <h2>👥 Party</h2>
+        <div class="panel-subtitle">Your emergency response team</div>
+      </div>
+      <button class="panel-close" onclick="togglePanel('partyPanel')">×</button>
+    </div>
+    <div style="margin-bottom: 1rem;">
+      <div class="form-group">
+        <label class="form-label">Party Code (Share with team)</label>
+        <input type="text" class="form-input" id="partyCode" readonly style="font-family: monospace; letter-spacing: 2px;" />
+      </div>
+      <button class="btn primary" style="width: 100%;" onclick="copyPartyCode()">📋 Copy Party Code</button>
+    </div>
+    <div class="party-list" id="partyList">
+      <!-- Party members dynamically inserted here -->
+    </div>
+    <div style="margin-top: 1rem;">
+      <button class="btn" style="width: 100%;" onclick="invitePartyMember()">+ Invite Member</button>
+    </div>
+  </div>
+  
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Map Panel (Center)
+       WHAT: Interactive evacuation map
+       HOW: SVG map with routes and markers
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="hud-panel panel-center" id="mapPanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <h2>🗺️ Evacuation Map</h2>
+        <div class="panel-subtitle">Kingston & Port Royal tactical overview</div>
+      </div>
+      <button class="panel-close" onclick="togglePanel('mapPanel')">×</button>
+    </div>
+    <div style="border: 1px solid rgba(79, 209, 255, 0.3); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.6);">
+      <svg viewBox="0 0 1000 500" style="width: 100%; height: auto; display: block;">
+        <rect x="0" y="0" width="1000" height="500" fill="#0b1933"/>
+        <path d="M100,240 C260,160 480,180 640,220 C720,240 780,280 840,300 C880,320 910,360 940,380 L940,500 L0,500 L0,300 C40,280 70,260 100,240 Z" fill="#0f213f"/>
+        <path d="M820,310 C860,320 900,330 930,340 C960,350 980,360 995,370 L995,385 C960,370 920,360 880,350 C860,345 840,338 820,330 Z" fill="#12294d"/>
+        <polyline points="860,335 820,320 760,305 700,300 640,295 580,290 520,285 460,280 420,275" stroke="#4fd1ff" stroke-width="4" fill="none" stroke-dasharray="8 6" filter="url(#glow)"/>
+        <circle cx="860" cy="335" r="8" fill="#4fd1ff"/>
+        <circle cx="640" cy="295" r="8" fill="#4fd1ff"/>
+        <circle cx="420" cy="275" r="8" fill="#4fd1ff"/>
+        <path d="M1000,360 L1000,500 L0,500 L0,440 C160,420 360,410 560,420 C760,430 920,440 1000,460 Z" fill="rgba(231,76,60,0.2)" stroke="rgba(231,76,60,0.4)" stroke-width="2"/>
+      </svg>
+    </div>
+    <div style="margin-top: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: #4fd1ff; box-shadow: 0 0 10px #4fd1ff;"></div>
+        <span class="text-muted" style="font-size: 0.85rem;">Evacuation Route</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: #e74c3c; box-shadow: 0 0 10px #e74c3c;"></div>
+        <span class="text-muted" style="font-size: 0.85rem;">Flood Risk Zone</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Chat Panel (Bottom)
+       WHAT: Party communication chat
+       HOW: Message list with send functionality
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="hud-panel panel-bottom" id="chatPanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <h2>💬 Party Chat</h2>
+        <div class="panel-subtitle">Coordinate with your team</div>
+      </div>
+      <button class="panel-close" onclick="togglePanel('chatPanel')">×</button>
+    </div>
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-message">
+          <div class="chat-avatar">🤖</div>
+          <div class="chat-content">
+            <div class="chat-username">System</div>
+            <div class="chat-bubble">Welcome to party chat! Coordinate your emergency preparedness here.</div>
+            <div class="chat-timestamp">Just now</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." onkeypress="handleChatKeypress(event)" />
+        <button class="chat-send" onclick="sendChatMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOOLTIP: Character Panel (Center)
+       WHAT: Detailed character stats and progression
+       HOW: Comprehensive character sheet
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="hud-panel panel-center" id="characterPanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <h2>👤 Character Sheet</h2>
+        <div class="panel-subtitle">Your survivor profile</div>
+      </div>
+      <button class="panel-close" onclick="togglePanel('characterPanel')">×</button>
+    </div>
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <div style="font-size: 4rem; margin-bottom: 1rem;" id="charSheetIcon">👤</div>
+      <h3 style="color: var(--brand); font-size: 1.5rem; margin-bottom: 0.5rem;" id="charSheetName">Character Name</h3>
+      <div class="text-muted" id="charSheetClass">Class</div>
+      <div class="text-muted" style="font-style: italic; margin-top: 0.5rem;" id="charSheetBio">Bio</div>
+    </div>
+    <div class="flex flex-col gap-1">
+      <div style="display: flex; justify-content: space-between; padding: 0.6rem; background: rgba(0,0,0,0.3); border-radius: 6px;">
+        <span class="text-muted">Level</span>
+        <span class="text-brand" style="font-weight: 700;" id="charSheetLevel">1</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 0.6rem; background: rgba(0,0,0,0.3); border-radius: 6px;">
+        <span class="text-muted">Total XP</span>
+        <span class="text-legendary" style="font-weight: 700;" id="charSheetTotalXP">0</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 0.6rem; background: rgba(0,0,0,0.3); border-radius: 6px;">
+        <span class="text-muted">Quests Completed</span>
+        <span class="text-brand" style="font-weight: 700;" id="charSheetQuests">0</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 0.6rem; background: rgba(0,0,0,0.3); border-radius: 6px;">
+        <span class="text-muted">Days Active</span>
+        <span class="text-brand" style="font-weight: 700;" id="charSheetDays">1</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 0.6rem; background: rgba(0,0,0,0.3); border-radius: 6px;">
+        <span class="text-muted">Party Members</span>
+        <span class="text-brand" style="font-weight: 700;" id="charSheetPartyCount">1</span>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+<!-- Zero-Harm Footer -->
+<div style="position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-overlay); border-top: var(--border-glow); padding: 0.4rem 1rem; font-size: 0.7rem; color: var(--muted); text-align: center; z-index: 999; backdrop-filter: blur(8px);">
+  <strong style="color: var(--alert-danger);">⚠️ Safety:</strong> Always follow official emergency guidance • 
+  <strong style="color: var(--brand);">🔒 Privacy:</strong> All data stored locally • 
+  <strong style="color: var(--quest-complete);">⚖️ License:</strong> CC BY-NC-SA 4.0 • Non-weaponization commitment
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   ═══════════════════════════════════════════════════════════════
+   
+   JAVASCRIPT APPLICATION LOGIC
+   
+   ARCHITECTURE:
+   1. Starfield System - Multi-layer parallax animation
+   2. Character System - Creation, progression, stats
+   3. Quest System - Task tracking and rewards
+   4. Inventory System - Item management
+   5. Skill Tree - Ability unlocks
+   6. Party System - Multiplayer coordination
+   7. Chat System - Team communication
+   8. Achievement System - Reward notifications
+   9. IndexedDB - Local persistence
+   10. Analytics - Privacy-first tracking
+   
+   GITHUB SOURCES:
+   - Quest system inspired by questlog.js open source
+   - Inventory grid from rpg-inventory-system
+   - Skill tree pattern from D3.js skill tree examples
+   - Party system from multiplayer-game-starter
+   - Achievement toasts from toastify-js patterns
+   
+   ═══════════════════════════════════════════════════════════════
+   ═══════════════════════════════════════════════════════════════ */
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Advanced Starfield System
+// WHAT: Multi-layer parallax starfield with nebulae and shooting stars
+// HOW: Multiple canvas layers with different speeds and particle types
+// GITHUB SOURCE: Inspired by three.js starfield examples
+// EXPANSION: "Add black holes, wormholes, space debris"
+// ═══════════════════════════════════════════════════════════════
+
+class StarfieldLayer {
+  constructor(canvasId, particleCount, speedMultiplier, sizeRange) {
+    this.canvas = document.getElementById(canvasId);
+    this.ctx = this.canvas.getContext('2d');
+    this.particles = [];
+    this.particleCount = particleCount;
+    this.speedMultiplier = speedMultiplier;
+    this.sizeRange = sizeRange;
+    this.shootingStars = [];
+    this.resize();
+    this.init();
+  }
+  
+  resize() {
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+    this.canvas.width = this.width;
+    this.canvas.height = this.height;
+  }
+  
+  init() {
+    for (let i = 0; i < this.particleCount; i++) {
+      this.particles.push(this.createParticle());
+    }
+  }
+  
+  createParticle() {
+    return {
+      x: Math.random() * this.width,
+      y: Math.random() * this.height,
+      z: Math.random() * 1 + 0.2,
+      radius: Math.random() * this.sizeRange[1] + this.sizeRange[0],
+      speed: (Math.random() * 0.5 + 0.2) * this.speedMultiplier,
+      twinkle: Math.random() * Math.PI * 2,
+      twinkleSpeed: Math.random() * 0.02 + 0.01,
+      opacity: Math.random() * 0.5 + 0.5
+    };
+  }
+  
+  createShootingStar() {
+    return {
+      x: Math.random() * this.width,
+      y: Math.random() * this.height * 0.5,
+      length: Math.random() * 80 + 40,
+      speed: Math.random() * 8 + 10,
+      angle: Math.random() * Math.PI / 4 + Math.PI / 4,
+      opacity: 1,
+      life: 1
+    };
+  }
+  
+  update() {
+    this.ctx.clearRect(0, 0, this.width, this.height);
+    this.ctx.globalCompositeOperation = 'lighter';
+    
+    // Update and draw stars
+    for (const particle of this.particles) {
+      particle.y += particle.speed * particle.z;
+      if (particle.y > this.height) {
+        particle.y = 0;
+        particle.x = Math.random() * this.width;
+      }
+      
+      particle.twinkle += particle.twinkleSpeed;
+      const twinkleOpacity = particle.opacity * (0.7 + Math.sin(particle.twinkle) * 0.3);
+      
+      const gradient = this.ctx.createRadialGradient(
+        particle.x, particle.y, 0,
+        particle.x, particle.y, particle.radius * 3
+      );
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${twinkleOpacity})`);
+      gradient.addColorStop(0.4, `rgba(180, 220, 255, ${twinkleOpacity * 0.6})`);
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      
+      this.ctx.fillStyle = gradient;
+      this.ctx.beginPath();
+      this.ctx.arc(particle.x, particle.y, particle.radius * 3, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+    
+    // Random shooting stars
+    if (Math.random() < 0.003 && this.shootingStars.length < 2) {
+      this.shootingStars.push(this.createShootingStar());
+    }
+    
+    // Update and draw shooting stars
+    for (let i = this.shootingStars.length - 1; i >= 0; i--) {
+      const star = this.shootingStars[i];
+      
+      star.x += Math.cos(star.angle) * star.speed;
+      star.y += Math.sin(star.angle) * star.speed;
+      star.life -= 0.01;
+      star.opacity = star.life;
+      
+      if (star.life <= 0 || star.x > this.width || star.y > this.height) {
+        this.shootingStars.splice(i, 1);
+        continue;
+      }
+      
+      const gradient = this.ctx.createLinearGradient(
+        star.x, star.y,
+        star.x - Math.cos(star.angle) * star.length,
+        star.y - Math.sin(star.angle) * star.length
+      );
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${star.opacity})`);
+      gradient.addColorStop(0.5, `rgba(180, 220, 255, ${star.opacity * 0.5})`);
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      
+      this.ctx.strokeStyle = gradient;
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(star.x, star.y);
+      this.ctx.lineTo(
+        star.x - Math.cos(star.angle) * star.length,
+        star.y - Math.sin(star.angle) * star.length
+      );
+      this.ctx.stroke();
+    }
+  }
+}
+
+class NebulaLayer {
+  constructor() {
+    this.canvas = document.getElementById('nebula-layer');
+    this.ctx = this.canvas.getContext('2d');
+    this.clouds = [];
+    this.resize();
+    this.init();
+  }
+  
+  resize() {
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+    this.canvas.width = this.width;
+    this.canvas.height = this.height;
+  }
+  
+  init() {
+    for (let i = 0; i < 5; i++) {
+      this.clouds.push({
+        x: Math.random() * this.width,
+        y: Math.random() * this.height,
+        radius: Math.random() * 300 + 200,
+        speedX: (Math.random() - 0.5) * 0.1,
+        speedY: (Math.random() - 0.5) * 0.1,
+        color: [
+          `rgba(79, 209, 255, 0.03)`,
+          `rgba(155, 89, 182, 0.03)`,
+          `rgba(46, 204, 113, 0.02)`
+        ][Math.floor(Math.random() * 3)]
+      });
+    }
+  }
+  
+  update() {
+    this.ctx.clearRect(0, 0, this.width, this.height);
+    
+    for (const cloud of this.clouds) {
+      cloud.x += cloud.speedX;
+      cloud.y += cloud.speedY;
+      
+      if (cloud.x < -cloud.radius) cloud.x = this.width + cloud.radius;
+      if (cloud.x > this.width + cloud.radius) cloud.x = -cloud.radius;
+      if (cloud.y < -cloud.radius) cloud.y = this.height + cloud.radius;
+      if (cloud.y > this.height + cloud.radius) cloud.y = -cloud.radius;
+      
+      const gradient = this.ctx.createRadialGradient(
+        cloud.x, cloud.y, 0,
+        cloud.x, cloud.y, cloud.radius
+      );
+      gradient.addColorStop(0, cloud.color);
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      
+      this.ctx.fillStyle = gradient;
+      this.ctx.beginPath();
+      this.ctx.arc(cloud.x, cloud.y, cloud.radius, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+  }
+}
+
+// Initialize starfield layers
+const nebula = new NebulaLayer();
+const starfieldBg = new StarfieldLayer('starfield-bg', 150, 0.3, [0.5, 1]);
+const starfieldMid = new StarfieldLayer('starfield-mid', 100, 0.7, [0.8, 1.5]);
+const starfieldFg = new StarfieldLayer('starfield-fg', 50, 1.2, [1, 2]);
+
+function animateStarfield() {
+  nebula.update();
+  starfieldBg.update();
+  starfieldMid.update();
+  starfieldFg.update();
+  requestAnimationFrame(animateStarfield);
+}
+
+window.addEventListener('resize', () => {
+  nebula.resize();
+  starfieldBg.resize();
+  starfieldMid.resize();
+  starfieldFg.resize();
+});
+
+animateStarfield();
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Game State Management
+// WHAT: Central state object for all game data
+// HOW: Object storing character, quests, inventory, party
+// USAGE: Single source of truth for game state
+// OUTCOME: Predictable state management
+// ═══════════════════════════════════════════════════════════════
+
+const gameState = {
+  character: {
+    name: 'Survivor',
+    class: null,
+    bio: '',
+    level: 1,
+    xp: 0,
+    xpToNext: 1000,
+    health: 100,
+    maxHealth: 100,
+    readiness: 50,
+    maxReadiness: 100,
+    skillPoints: 3,
+    totalXP: 0,
+    questsCompleted: 0,
+    daysActive: 1
+  },
+  quests: [],
+  inventory: [],
+  skills: [],
+  party: {
+    code: null,
+    members: []
+  },
+  achievements: [],
+  settings: {}
+};
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: IndexedDB Wrapper
+// WHAT: Local storage for game progress
+// HOW: Promise-based IndexedDB API
+// USAGE: Save/load game state
+// OUTCOME: Persistent progress
+// ═══════════════════════════════════════════════════════════════
+
+const DB_NAME = 'port-royal-rpg';
+const DB_VERSION = 1;
+let db;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains('gameState')) {
+        database.createObjectStore('gameState', { keyPath: 'id' });
+      }
+    };
+    
+    request.onsuccess = () => {
+      db = request.result;
+      resolve();
+    };
+    
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveGame() {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['gameState'], 'readwrite');
+    const store = transaction.objectStore('gameState');
+    const request = store.put({ id: 'save', data: gameState, timestamp: Date.now() });
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function loadGame() {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['gameState'], 'readonly');
+    const store = transaction.objectStore('gameState');
+    const request = store.get('save');
+    request.onsuccess = () => {
+      if (request.result) {
+        Object.assign(gameState, request.result.data);
+      }
+      resolve();
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Character Creation System
+// WHAT: Multi-step character creation wizard
+// HOW: Step navigation and data collection
+// GITHUB SOURCE: Pattern from game character creators
+// ═══════════════════════════════════════════════════════════════
+
+let selectedClass = null;
+let currentStep = 1;
+
+function nextStep(step) {
+  document.querySelectorAll('.creator-step').forEach(s => s.classList.remove('active'));
+  document.getElementById(`step${step}`).classList.add('active');
+  currentStep = step;
+}
+
+function selectClass(className) {
+  selectedClass = className;
+  document.querySelectorAll('.class-card').forEach(card => {
+    card.classList.remove('selected');
+  });
+  document.querySelector(`.class-card[data-class="${className}"]`).classList.add('selected');
+  document.getElementById('classNextBtn').disabled = false;
+}
+
+async function finishCharacterCreation() {
+  const name = document.getElementById('characterName').value.trim();
+  const bio = document.getElementById('characterBio').value.trim();
+  
+  if (!name) {
+    alert('Please enter a character name');
+    return;
+  }
+  
+  if (!selectedClass) {
+    alert('Please select a class');
+    return;
+  }
+  
+  gameState.character.name = name;
+  gameState.character.class = selectedClass;
+  gameState.character.bio = bio;
+  
+  // Set class icon
+  const classIcons = {
+    commander: '👨‍✈️',
+    medic: '⚕️',
+    engineer: '🔧',
+    scout: '🔍'
+  };
+  
+  // Apply class theme
+  document.body.setAttribute('data-class', selectedClass);
+  
+  // Initialize starting quests
+  initializeQuests();
+  
+  // Initialize inventory
+  initializeInventory();
+  
+  // Initialize skills
+  initializeSkills();
+  
+  // Initialize party
+  initializeParty();
+  
+  // Update UI
+  updateCharacterDisplay();
+  
+  // Save game
+  await saveGame();
+  
+  // Hide character creator
+  document.getElementById('characterCreator').classList.remove('active');
+  
+  // Show achievement
+  showAchievement('First Steps', 'Created your character', '🌟');
+  
+  // Award starting XP
+  awardXP(100, 'Character created');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Quest System
+// WHAT: RPG-style quest tracking with objectives
+// HOW: Quest objects with completion tracking
+// GITHUB SOURCE: Inspired by questlog.js
+// EXPANSION: "Add quest chains, branching quests, time limits"
+// ═══════════════════════════════════════════════════════════════
+
+function initializeQuests() {
+  gameState.quests = [
+    {
+      id: 'quest1',
+      title: 'Build Your Go-Bag',
+      icon: '🎒',
+      difficulty: 'easy',
+      description: 'Assemble a 72-hour emergency supply kit for each family member.',
+      objectives: [
+        { id: 'obj1', text: 'Add water (12L per person)', completed: false },
+        { id: 'obj2', text: 'Add non-perishable food', completed: false },
+        { id: 'obj3', text: 'Add first aid kit', completed: false },
+        { id: 'obj4', text: 'Add emergency documents', completed: false }
+      ],
+      rewards: { xp: 250, item: 'Go-Bag (Rare)' },
+      progress: 0,
+      active: true,
+      completed: false
+    },
+    {
+      id: 'quest2',
+      title: 'Form Your Emergency Network',
+      icon: '👥',
+      difficulty: 'medium',
+      description: 'Build a support network with neighbors and family for mutual aid.',
+      objectives: [
+        { id: 'obj1', text: 'Add 3 emergency contacts', completed: false },
+        { id: 'obj2', text: 'Establish out-of-area relay', completed: false },
+        { id: 'obj3', text: 'Create neighbor buddy system', completed: false },
+        { id: 'obj4', text: 'Share your party code', completed: false }
+      ],
+      rewards: { xp: 500, item: 'Communication Hub (Epic)' },
+      progress: 0,
+      active: true,
+      completed: false
+    },
+    {
+      id: 'quest3',
+      title: 'Master the Evacuation Routes',
+      icon: '🗺️',
+      difficulty: 'hard',
+      description: 'Learn and practice all evacuation routes from your location.',
+      objectives: [
+        { id: 'obj1', text: 'Identify primary evacuation route', completed: false },
+        { id: 'obj2', text: 'Map secondary escape routes', completed: false },
+        { id: 'obj3', text: 'Locate 3 assembly points', completed: false },
+        { id: 'obj4', text: 'Practice route with family', completed: false }
+      ],
+      rewards: { xp: 750, item: 'Navigation Expert Badge (Legendary)' },
+      progress: 0,
+      active: true,
+      completed: false
+    }
+  ];
+  
+  renderQuests();
+}
+
+function renderQuests() {
+  const questList = document.getElementById('questList');
+  questList.innerHTML = '';
+  
+  gameState.quests.forEach(quest => {
+    const completedObjectives = quest.objectives.filter(obj => obj.completed).length;
+    const totalObjectives = quest.objectives.length;
+    quest.progress = Math.floor((completedObjectives / totalObjectives) * 100);
+    
+    const questCard = document.createElement('div');
+    questCard.className = `quest-card ${quest.completed ? 'complete' : ''}`;
+    questCard.innerHTML = `
+      <div class="quest-header">
+        <div class="quest-title">
+          <span class="quest-icon">${quest.icon}</span>
+          ${quest.title}
+        </div>
+        <div class="quest-difficulty ${quest.difficulty}">${quest.difficulty}</div>
+      </div>
+      <div class="quest-description">${quest.description}</div>
+      <div class="quest-objectives">
+        ${quest.objectives.map(obj => `
+          <div class="objective">
+            <div class="objective-checkbox ${obj.completed ? 'checked' : ''}" 
+                 onclick="toggleObjective('${quest.id}', '${obj.id}')">
+            </div>
+            <div class="objective-text ${obj.completed ? 'completed' : ''}">${obj.text}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="quest-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${quest.progress}%;"></div>
+          <div class="progress-text">${quest.progress}% Complete</div>
+        </div>
+      </div>
+      <div class="quest-rewards">
+        <div class="reward xp">⭐ ${quest.rewards.xp} XP</div>
+        <div class="reward item">🎁 ${quest.rewards.item}</div>
+      </div>
+    `;
+    
+    questList.appendChild(questCard);
+  });
+  
+  updateQuestBadge();
+}
+
+function toggleObjective(questId, objId) {
+  const quest = gameState.quests.find(q => q.id === questId);
+  if (!quest || quest.completed) return;
+  
+  const objective = quest.objectives.find(o => o.id === objId);
+  objective.completed = !objective.completed;
+  
+  const completedObjectives = quest.objectives.filter(obj => obj.completed).length;
+  const totalObjectives = quest.objectives.length;
+  
+  if (completedObjectives === totalObjectives && !quest.completed) {
+    completeQuest(questId);
+  }
+  
+  renderQuests();
+  saveGame();
+}
+
+function completeQuest(questId) {
+  const quest = gameState.quests.find(q => q.id === questId);
+  if (!quest || quest.completed) return;
+  
+  quest.completed = true;
+  quest.progress = 100;
+  gameState.character.questsCompleted++;
+  
+  awardXP(quest.rewards.xp, `Quest completed: ${quest.title}`);
+  showAchievement('Quest Complete!', quest.title, '🏆');
+  
+  // Add reward item to inventory
+  addItemToInventory({
+    name: quest.rewards.item,
+    icon: '🎁',
+    rarity: quest.difficulty === 'legendary' ? 'legendary' : quest.difficulty === 'hard' ? 'epic' : 'rare'
+  });
+}
+
+function updateQuestBadge() {
+  const activeQuests = gameState.quests.filter(q => q.active && !q.completed).length;
+  const badge = document.getElementById('questBadge');
+  if (activeQuests > 0) {
+    badge.textContent = activeQuests;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Inventory System
+// WHAT: Grid-based item management
+// HOW: Array of items with visual slots
+// GITHUB SOURCE: Inspired by rpg-inventory-system
+// EXPANSION: "Add drag-drop, item stacking, categories"
+// ═══════════════════════════════════════════════════════════════
+
+function initializeInventory() {
+  const maxSlots = 36;
+  for (let i = 0; i < maxSlots; i++) {
+    gameState.inventory.push(null);
+  }
+  renderInventory();
+}
+
+function renderInventory() {
+  const grid = document.getElementById('inventoryGrid');
+  grid.innerHTML = '';
+  
+  gameState.inventory.forEach((item, index) => {
+    const slot = document.createElement('div');
+    slot.className = `inventory-slot ${item ? 'filled' : ''} ${item ? `rarity-${item.rarity}` : ''}`;
+    
+    if (item) {
+      slot.innerHTML = `
+        <div class="item-icon">${item.icon}</div>
+        ${item.count > 1 ? `<div class="item-count">${item.count}</div>` : ''}
+        <div class="item-tooltip">${item.name}</div>
+      `;
+    }
+    
+    slot.onclick = () => {
+      if (item) {
+        removeItemFromInventory(index);
+      }
+    };
+    
+    grid.appendChild(slot);
+  });
+  
+  updateInventoryCount();
+}
+
+function addItemToInventory(item) {
+  const emptySlot = gameState.inventory.findIndex(slot => slot === null);
+  if (emptySlot !== -1) {
+    gameState.inventory[emptySlot] = { ...item, count: item.count || 1 };
+    renderInventory();
+    saveGame();
+    showAchievement('Item Acquired', item.name, item.icon);
+  } else {
+    alert('Inventory full!');
+  }
+}
+
+function removeItemFromInventory(index) {
+  if (confirm(`Remove ${gameState.inventory[index].name}?`)) {
+    gameState.inventory[index] = null;
+    renderInventory();
+    saveGame();
+  }
+}
+
+function updateInventoryCount() {
+  const filled = gameState.inventory.filter(slot => slot !== null).length;
+  document.getElementById('inventoryCount').textContent = filled;
+  document.getElementById('inventoryMax').textContent = gameState.inventory.length;
+}
+
+function addItem() {
+  const items = [
+    { name: 'Water Bottle', icon: '💧', rarity: 'common' },
+    { name: 'MRE Pack', icon: '🥫', rarity: 'common' },
+    { name: 'First Aid Kit', icon: '🩹', rarity: 'uncommon' },
+    { name: 'Flashlight', icon: '🔦', rarity: 'common' },
+    { name: 'Radio', icon: '📻', rarity: 'rare' },
+    { name: 'Blanket', icon: '🛏️', rarity: 'common' },
+    { name: 'Multi-tool', icon: '🔧', rarity: 'uncommon' },
+    { name: 'Compass', icon: '🧭', rarity: 'uncommon' },
+    { name: 'Fire Starter', icon: '🔥', rarity: 'rare' },
+    { name: 'Water Filter', icon: '💦', rarity: 'epic' }
+  ];
+  
+  const randomItem = items[Math.floor(Math.random() * items.length)];
+  addItemToInventory(randomItem);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Skill Tree System
+// WHAT: Visual skill progression
+// HOW: Connected nodes with unlock requirements
+// GITHUB SOURCE: D3.js skill tree patterns
+// EXPANSION: "Add skill synergies, multiple trees per class"
+// ═══════════════════════════════════════════════════════════════
+
+function initializeSkills() {
+  gameState.skills = [
+    { id: 'sk1', name: 'First Aid', icon: '⚕️', x: 250, y: 100, unlocked: false, connects: ['sk2', 'sk3'] },
+    { id: 'sk2', name: 'Navigation', icon: '🧭', x: 150, y: 200, unlocked: false, connects: ['sk4'] },
+    { id: 'sk3', name: 'Communication', icon: '📻', x: 350, y: 200, unlocked: false, connects: ['sk5'] },
+    { id: 'sk4', name: 'Shelter Building', icon: '🏠', x: 100, y: 300, unlocked: false, connects: [] },
+    { id: 'sk5', name: 'Resource Management', icon: '📦', x: 400, y: 300, unlocked: false, connects: [] }
+  ];
+  
+  renderSkillTree();
+}
+
+function renderSkillTree() {
+  const tree = document.getElementById('skillTree');
+  tree.innerHTML = '';
+  
+  // Draw connectors first
+  gameState.skills.forEach(skill => {
+    skill.connects.forEach(targetId => {
+      const target = gameState.skills.find(s => s.id === targetId);
+      if (target) {
+        const dx = target.x - skill.x;
+        const dy = target.y - skill.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+        
+        const connector = document.createElement('div');
+        connector.className = `skill-connector ${skill.unlocked && target.unlocked ? 'active' : ''}`;
+        connector.style.width = `${distance}px`;
+        connector.style.left = `${skill.x + 30}px`;
+        connector.style.top = `${skill.y + 30}px`;
+        connector.style.transform = `rotate(${angle}rad)`;
+        tree.appendChild(connector);
+      }
+    });
+  });
+  
+  // Draw nodes
+  gameState.skills.forEach(skill => {
+    const node = document.createElement('div');
+    node.className = `skill-node ${skill.unlocked ? 'unlocked' : 'locked'}`;
+    node.style.left = `${skill.x}px`;
+    node.style.top = `${skill.y}px`;
+    node.innerHTML = `
+      <div class="skill-node-icon">${skill.icon}</div>
+      <div class="skill-node-name">${skill.name}</div>
+    `;
+    
+    if (!skill.unlocked && gameState.character.skillPoints > 0) {
+      node.onclick = () => unlockSkill(skill.id);
+    }
+    
+    tree.appendChild(node);
+  });
+  
+  document.getElementById('skillPoints').textContent = gameState.character.skillPoints;
+}
+
+function unlockSkill(skillId) {
+  if (gameState.character.skillPoints <= 0) {
+    alert('No skill points available!');
+    return;
+  }
+  
+  const skill = gameState.skills.find(s => s.id === skillId);
+  if (!skill || skill.unlocked) return;
+  
+  skill.unlocked = true;
+  gameState.character.skillPoints--;
+  
+  renderSkillTree();
+  saveGame();
+  
+  showAchievement('Skill Unlocked', skill.name, skill.icon);
+  awardXP(100, `Skill unlocked: ${skill.name}`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Party/Multiplayer System
+// WHAT: Team coordination and member management
+// HOW: Shareable party codes with local simulation
+// GITHUB SOURCE: Multiplayer game starter patterns
+// EXPANSION: "Add real-time sync, WebRTC, Firebase integration"
+// ═══════════════════════════════════════════════════════════════
+
+function initializeParty() {
+  gameState.party.code = generatePartyCode();
+  gameState.party.members = [
+    {
+      id: 'player',
+      name: gameState.character.name,
+      class: gameState.character.class,
+      level: gameState.character.level,
+      role: 'Leader',
+      online: true
+    }
+  ];
+  
+  renderParty();
+}
+
+function generatePartyCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+function renderParty() {
+  document.getElementById('partyCode').value = gameState.party.code;
+  
+  const partyList = document.getElementById('partyList');
+  partyList.innerHTML = '';
+  
+  gameState.party.members.forEach(member => {
+    const classIcons = {
+      commander: '👨‍✈️',
+      medic: '⚕️',
+      engineer: '🔧',
+      scout: '🔍'
+    };
+    
+    const memberDiv = document.createElement('div');
+    memberDiv.className = `party-member ${member.role === 'Leader' ? 'leader' : ''}`;
+    memberDiv.innerHTML = `
+      <div class="party-avatar">${classIcons[member.class] || '👤'}</div>
+      <div class="party-info">
+        <div class="party-name">${member.name} ${member.role === 'Leader' ? '⭐' : ''}</div>
+        <div class="party-role">${member.class || 'Unknown'} • Lvl ${member.level}</div>
+      </div>
+      <div class="party-status">
+        <div class="status-indicator ${member.online ? 'online' : 'offline'}"></div>
+      </div>
+      <div class="party-actions">
+        ${member.id !== 'player' ? '<button class="party-btn">Kick</button>' : ''}
+      </div>
+    `;
+    
+    partyList.appendChild(memberDiv);
+  });
+  
+  document.getElementById('charSheetPartyCount').textContent = gameState.party.members.length;
+}
+
+function copyPartyCode() {
+  const code = document.getElementById('partyCode');
+  code.select();
+  document.execCommand('copy');
+  showAchievement('Copied!', `Party code: ${gameState.party.code}`, '📋');
+}
+
+function invitePartyMember() {
+  const name = prompt('Enter party member name:');
+  if (!name) return;
+  
+  const classes = ['commander', 'medic', 'engineer', 'scout'];
+  const randomClass = classes[Math.floor(Math.random() * classes.length)];
+  
+  gameState.party.members.push({
+    id: `member_${Date.now()}`,
+    name,
+    class: randomClass,
+    level: Math.floor(Math.random() * 5) + 1,
+    role: 'Member',
+    online: Math.random() > 0.3
+  });
+  
+  renderParty();
+  saveGame();
+  showAchievement('Party Invite Sent', `${name} joined the party`, '👥');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Chat System
+// WHAT: Party communication interface
+// HOW: Message list with send functionality
+// EXPANSION: "Add timestamps, emojis, file sharing"
+// ═══════════════════════════════════════════════════════════════
+
+function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message) return;
+  
+  const chatMessages = document.getElementById('chatMessages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'chat-message self';
+  
+  const classIcons = {
+    commander: '👨‍✈️',
+    medic: '⚕️',
+    engineer: '🔧',
+    scout: '🔍'
+  };
+  
+  messageDiv.innerHTML = `
+    <div class="chat-avatar">${classIcons[gameState.character.class] || '👤'}</div>
+    <div class="chat-content">
+      <div class="chat-username">${gameState.character.name}</div>
+      <div class="chat-bubble">${message}</div>
+      <div class="chat-timestamp">Just now</div>
+    </div>
+  `;
+  
+  chatMessages.appendChild(messageDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  input.value = '';
+  
+  // Simulate response (in real multiplayer, this would come from server)
+  setTimeout(() => {
+    if (Math.random() > 0.5) {
+      const partyMember = gameState.party.members.find(m => m.id !== 'player');
+      if (partyMember) {
+        const responseDiv = document.createElement('div');
+        responseDiv.className = 'chat-message';
+        responseDiv.innerHTML = `
+          <div class="chat-avatar">${classIcons[partyMember.class]}</div>
+          <div class="chat-content">
+            <div class="chat-username">${partyMember.name}</div>
+            <div class="chat-bubble">Copy that! 👍</div>
+            <div class="chat-timestamp">Just now</div>
+          </div>
+        `;
+        chatMessages.appendChild(responseDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    }
+  }, 2000);
+}
+
+function handleChatKeypress(e) {
+  if (e.key === 'Enter') {
+    sendChatMessage();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: XP and Leveling System
+// WHAT: Character progression with level ups
+// HOW: XP accumulation triggers level increases
+// OUTCOME: Satisfying progression loop
+// ═══════════════════════════════════════════════════════════════
+
+function awardXP(amount, reason) {
+  gameState.character.xp += amount;
+  gameState.character.totalXP += amount;
+  
+  updateCharacterDisplay();
+  
+  if (gameState.character.xp >= gameState.character.xpToNext) {
+    levelUp();
+  }
+  
+  saveGame();
+}
+
+function levelUp() {
+  gameState.character.level++;
+  gameState.character.xp -= gameState.character.xpToNext;
+  gameState.character.xpToNext = Math.floor(gameState.character.xpToNext * 1.5);
+  gameState.character.skillPoints += 2;
+  gameState.character.maxHealth += 10;
+  gameState.character.health = gameState.character.maxHealth;
+  gameState.character.maxReadiness += 5;
+  
+  updateCharacterDisplay();
+  showAchievement('Level Up!', `You are now level ${gameState.character.level}!`, '⭐');
+  
+  // Visual feedback
+  document.getElementById('levelBadge').style.animation = 'none';
+  setTimeout(() => {
+    document.getElementById('levelBadge').style.animation = '';
+  }, 10);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: UI Update Functions
+// WHAT: Sync UI with game state
+// HOW: Update DOM elements with current values
+// USAGE: Called after state changes
+// OUTCOME: Reactive UI
+// ═══════════════════════════════════════════════════════════════
+
+function updateCharacterDisplay() {
+  const classIcons = {
+    commander: '👨‍✈️',
+    medic: '⚕️',
+    engineer: '🔧',
+    scout: '🔍'
+  };
+  
+  const classNames = {
+    commander: 'Commander',
+    medic: 'Medic',
+    engineer: 'Engineer',
+    scout: 'Scout'
+  };
+  
+  document.getElementById('characterNameDisplay').textContent = gameState.character.name;
+  document.getElementById('characterClassDisplay').textContent = classNames[gameState.character.class] || 'Unassigned';
+  document.getElementById('avatarIcon').textContent = classIcons[gameState.character.class] || '👤';
+  document.getElementById('levelBadge').textContent = gameState.character.level;
+  
+  // Health bar
+  const healthPercent = (gameState.character.health / gameState.character.maxHealth) * 100;
+  document.getElementById('healthBar').style.width = `${healthPercent}%`;
+  document.getElementById('healthValue').textContent = `${gameState.character.health}/${gameState.character.maxHealth}`;
+  
+  // Readiness bar
+  const readinessPercent = (gameState.character.readiness / gameState.character.maxReadiness) * 100;
+  document.getElementById('readinessBar').style.width = `${readinessPercent}%`;
+  document.getElementById('readinessValue').textContent = `${gameState.character.readiness}/${gameState.character.maxReadiness}`;
+  
+  // XP bar
+  const xpPercent = (gameState.character.xp / gameState.character.xpToNext) * 100;
+  document.getElementById('xpBar').style.width = `${xpPercent}%`;
+  document.getElementById('xpValue').textContent = `${gameState.character.xp}/${gameState.character.xpToNext}`;
+  
+  // Character sheet
+  document.getElementById('charSheetIcon').textContent = classIcons[gameState.character.class] || '👤';
+  document.getElementById('charSheetName').textContent = gameState.character.name;
+  document.getElementById('charSheetClass').textContent = `${classNames[gameState.character.class] || 'Unassigned'} • Level ${gameState.character.level}`;
+  document.getElementById('charSheetBio').textContent = gameState.character.bio || 'No bio set';
+  document.getElementById('charSheetLevel').textContent = gameState.character.level;
+  document.getElementById('charSheetTotalXP').textContent = gameState.character.totalXP.toLocaleString();
+  document.getElementById('charSheetQuests').textContent = gameState.character.questsCompleted;
+  document.getElementById('charSheetDays').textContent = gameState.character.daysActive;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Achievement Toast System
+// WHAT: Popup notifications for achievements
+// HOW: Slide-in animation with auto-dismiss
+// GITHUB SOURCE: Inspired by toastify-js
+// ═══════════════════════════════════════════════════════════════
+
+function showAchievement(title, description, icon = '🏆') {
+  const toast = document.getElementById('achievementToast');
+  document.getElementById('achievementName').textContent = title;
+  document.getElementById('achievementDesc').textContent = description;
+  document.querySelector('.achievement-toast-icon').textContent = icon;
+  
+  toast.classList.add('show');
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 4000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Panel Toggle System
+// WHAT: Show/hide HUD panels
+// HOW: Toggle active class on panels
+// USAGE: Called by HUD buttons
+// OUTCOME: Collapsible interface
+// ═══════════════════════════════════════════════════════════════
+
+function togglePanel(panelId) {
+  const panel = document.getElementById(panelId);
+  const btn = event?.currentTarget;
+  
+  // Close all other panels
+  document.querySelectorAll('.hud-panel').forEach(p => {
+    if (p.id !== panelId) {
+      p.classList.remove('active');
+    }
+  });
+  
+  // Remove active state from all buttons
+  document.querySelectorAll('.hud-btn').forEach(b => b.classList.remove('active'));
+  
+  // Toggle panel
+  panel.classList.toggle('active');
+  
+  // Toggle button active state
+  if (btn && panel.classList.contains('active')) {
+    btn.classList.add('active');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP: Initialization
+// WHAT: Bootstrap application on load
+// HOW: Load saved game or show character creator
+// USAGE: Automatic on page load
+// OUTCOME: Restored game state or new game
+// ═══════════════════════════════════════════════════════════════
+
+async function init() {
+  try {
+    await openDB();
+    await loadGame();
+    
+    if (gameState.character.class) {
+      // Existing save found
+      document.body.setAttribute('data-class', gameState.character.class);
+      updateCharacterDisplay();
+      renderQuests();
+      renderInventory();
+      renderSkillTree();
+      renderParty();
+    } else {
+      // New game - show character creator
+      setTimeout(() => {
+        document.getElementById('characterCreator').classList.add('active');
+      }, 500);
+    }
+    
+    // Hide loading screen
+    setTimeout(() => {
+      document.getElementById('loadingScreen').classList.add('hidden');
+    }, 1500);
+    
+  } catch (error) {
+    console.error('Initialization error:', error);
+    alert('Error loading game. Starting fresh.');
+    document.getElementById('characterCreator').classList.add('active');
+    document.getElementById('loadingScreen').classList.add('hidden');
+  }
+}
+
+// Start the game
+init();
+
+// Auto-save every 30 seconds
+setInterval(() => {
+  saveGame();
+}, 30000);
+
+// Console log for developers
+console.log('%c🏝️ Operation: Port Royal', 'background: #0a0e1a; color: #4fd1ff; padding: 10px 20px; border-radius: 8px; font-size: 16px; font-weight: bold;');
+console.log('%c⚠️ SAFETY FIRST', 'background: #e74c3c; color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: bold;');
+console.log('%cThis is a gamified emergency preparedness tool. Always follow official emergency guidance.', 'font-size: 12px; color: #9ca3b8;');
+console.log('%c🔒 Privacy: All data stored locally in IndexedDB', 'font-size: 12px; color: #2ecc71;');
+console.log('%c⚖️ License: CC BY-NC-SA 4.0 • Non-weaponization commitment', 'font-size: 12px; color: #3498db;');
+console.log('%cGitHub patterns used: questlog.js, rpg-inventory-system, D3.js skill trees, multiplayer-game-starter, toastify-js', 'font-size: 11px; color: #9ca3b8; font-style: italic;');
+
+</script>
+
+</body>
+</html>

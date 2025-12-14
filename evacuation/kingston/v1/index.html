@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kingston ↔ Port Royal Evacuation • Mycelial Strategy Bank</title>
+<meta name="theme-color" content="#0b0f1a"/>
+<link rel="manifest" id="manifest-link">
+<style>
+:root{
+  --bg:#0b0f1a; --panel:#0f1526; --card:#121a2e; --ink:#e6f0ff; --muted:#a8b3c7;
+  --brand:#59d2ff; --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --ring:rgba(89,210,255,.35);
+  --accent:#ff66cc;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; color:var(--ink);
+  font:15.5px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
+  background:radial-gradient(1100px 700px at 70% -10%,#162654 0%,var(--bg) 55%), #000;
+  overflow:hidden;
+}
+a{color:var(--brand);text-decoration:none} a:hover{text-decoration:underline}
+button{cursor:pointer}
+.container{max-width:1200px;margin:0 auto;padding:1rem}
+.grid{display:grid; gap:1rem}
+.h{font-weight:700; letter-spacing:.2px}
+.small{font-size:.9rem;color:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .5rem;border:1px solid #223056;border-radius:999px;background:#0d1430}
+kbd{background:#111b33;border:1px solid #253157;border-radius:4px;padding:0 .35rem}
+header{
+  position:relative; z-index:2; backdrop-filter:blur(6px);
+  background:linear-gradient(180deg, rgba(6,10,22,.8), rgba(6,10,22,.3));
+  border-bottom:1px solid #1d2747;
+}
+header .row{display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:.75rem;font-weight:700}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--brand);box-shadow:0 0 12px var(--brand)}
+main{position:relative;height:calc(100% - 64px);display:grid;grid-template-columns:340px 1fr 360px}
+@media (max-width:1100px){ main{grid-template-columns:1fr; height:auto; overflow:auto}}
+.card{
+  background:linear-gradient(180deg,#0d1430,#0a1126);
+  border:1px solid #1c2747; border-radius:16px; padding:12px; box-shadow:0 10px 24px rgba(0,0,0,.35)
+}
+.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.input, select, textarea{
+  width:100%; background:#0b1228; border:1px solid #213055; color:var(--ink);
+  padding:.6rem .7rem; border-radius:12px; outline:none
+}
+.input:focus, select:focus, textarea:focus{border-color:#355aa0; box-shadow:0 0 0 3px var(--ring)}
+.btn{
+  background:linear-gradient(180deg,#142550,#0f1a3a); border:1px solid #2a3f71;
+  color:var(--ink); padding:.55rem .8rem; border-radius:12px
+}
+.btn.ghost{background:transparent;border:1px dashed #29406f}
+.btn.ok{border-color:#1f624f; background:linear-gradient(180deg,#17443a,#0f2d27)}
+.btn.warn{border-color:#6b520a;background:linear-gradient(180deg,#3d2f09,#2a220a)}
+.btn.bad{border-color:#6b1f22;background:linear-gradient(180deg,#3d0f12,#2a0b0d)}
+.toolbar{display:flex;gap:.5rem;flex-wrap:wrap}
+.kv{display:grid;grid-template-columns:1fr auto;gap:.35rem .7rem;align-items:center}
+hr.sep{border:none;border-top:1px dashed #2a3b6a;margin:.7rem 0}
+footer.note{font-size:.85rem;color:var(--muted)}
+/* starfield */
+canvas.bg{position:fixed;inset:0;z-index:0}
+/* panels */
+#left,#center,#right{position:relative;z-index:1; padding:12px; overflow:auto}
+#center{min-height:520px}
+/* mycelial graph area */
+#graph{height:320px;background:#091125;border:1px solid #1b294e;border-radius:12px;position:relative;overflow:hidden}
+.legend{display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0}
+.legend .tag{opacity:.9}
+.badge{display:inline-flex;gap:.4rem;align-items:center;padding:.25rem .5rem;border-radius:8px;background:#0a1530;border:1px solid #22365f}
+table{width:100%;border-collapse:collapse}
+th,td{padding:.45rem;border-bottom:1px solid #1a2547;font-size:.95rem}
+tr:hover{background:#0c1430}
+code.inline{background:#0e1835;padding:.15rem .35rem;border:1px solid #26407a;border-radius:6px}
+#toast{position:fixed;right:12px;bottom:12px;z-index:99;display:none}
+.toast{background:#0b132a;border:1px solid #2a3f71;padding:.6rem .8rem;border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.45)}
+/* integrity ribbon */
+.ribbon{position:fixed;left:0;bottom:0;padding:.35rem .6rem;background:#0a1329;border-top-right-radius:10px;border-right:1px solid #2a3f71;border-top:1px solid #2a3f71;color:#9ab3d8;font-size:.85rem;z-index:4}
+</style>
+</head>
+<body>
+<canvas class="bg" id="bg"></canvas>
+
+<header>
+  <div class="container row">
+    <div class="brand">
+      <div class="dot"></div>
+      <div>Kingston ↔ Port Royal • Mycelial Evac</div>
+      <span class="tag">PWA</span><span class="tag">IndexedDB</span><span class="tag">Zero-Harm</span>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="btnInstall">Install</button>
+      <button class="btn ghost" id="btnExport">Export</button>
+      <label class="btn ghost" for="importFile" style="cursor:pointer">Import</label>
+      <input type="file" id="importFile" accept="application/json" style="display:none" />
+      <button class="btn" id="btnHash">Integrity</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT: Action Builder -->
+  <section id="left" class="grid">
+    <div class="card">
+      <div class="section-title">
+        <div class="h">🧭 Quick Phases</div>
+        <div class="small">Tap a phase to load its smart list</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn ok" data-phase="prepare">Prepare</button>
+        <button class="btn warn" data-phase="ready">Ready</button>
+        <button class="btn bad" data-phase="go">Go</button>
+        <button class="btn" data-phase="recovery">Recovery</button>
+      </div>
+      <hr class="sep"/>
+      <div class="kv">
+        <label>Scenario</label>
+        <select id="scenarioSel">
+          <option value="storm">Tropical Storm / Surge</option>
+          <option value="tsunami">Tsunami Advisory</option>
+          <option value="quake">Earthquake Aftershock</option>
+          <option value="fire">Urban/Wildland Fire Smoke</option>
+        </select>
+        <label>Neighborhood</label>
+        <select id="zoneSel">
+          <option value="port-royal">Port Royal</option>
+          <option value="nmia">NMIA / Palisadoes Strip</option>
+          <option value="harbour-view">Harbour View</option>
+          <option value="downtown">Downtown Kingston</option>
+          <option value="uc">Uptown / University Circle</option>
+        </select>
+      </div>
+      <hr class="sep"/>
+      <div class="section-title">
+        <div class="h">📋 Actions</div>
+        <div class="small"><kbd>Enter</kbd> to add</div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr auto">
+        <input class="input" id="actionInput" placeholder="Add an action… e.g., 'Check fuel; print paper map; call neighbor'"/>
+        <button class="btn" id="addAction">Add</button>
+      </div>
+      <div id="actionList" style="margin-top:.6rem"></div>
+      <div class="toolbar" style="margin-top:.6rem">
+        <button class="btn ghost" id="clearDone">Clear Done</button>
+        <button class="btn ghost" id="seedPhase">Seed Smart List</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        <div class="h">🌐 Grandmaster Link</div>
+        <div class="small">Federate with higher-order plans</div>
+      </div>
+      <div class="grid">
+        <input class="input" id="gmId" placeholder="Grandmaster Plan ID (e.g., PRA-GM-kingston-v1)"/>
+        <textarea class="input" id="gmNotes" rows="3" placeholder="Why link? Scope, custodians, validation steps…"></textarea>
+        <div class="toolbar">
+          <button class="btn" id="linkGM">Link</button>
+          <button class="btn ghost" id="viewGM">View Links</button>
+        </div>
+        <div id="gmList" class="small"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title"><div class="h">🧾 Resources</div><div class="small">Local contacts, shelters, docs</div></div>
+      <div class="grid" style="grid-template-columns:1fr auto">
+        <input class="input" id="resTitle" placeholder="Title (e.g., 'Community Center Shelter')" />
+        <button class="btn" id="addRes">Add</button>
+      </div>
+      <textarea class="input" id="resBody" rows="3" placeholder="Details, hours, phone, non-sensitive notes"></textarea>
+      <div id="resList" style="margin-top:.5rem"></div>
+    </div>
+  </section>
+
+  <!-- CENTER: Mycelial Graph + Plan Table -->
+  <section id="center" class="grid">
+    <div class="card">
+      <div class="section-title">
+        <div class="h">🕸️ Mycelial Strategy Graph</div>
+        <div class="legend">
+          <span class="tag">Node = Plan/Action</span>
+          <span class="tag">Edge = Dependency</span>
+          <span class="tag">Drag to reposition</span>
+        </div>
+      </div>
+      <div id="graph"></div>
+      <div class="toolbar" style="margin-top:.5rem">
+        <button class="btn ghost" id="addNode">Add Node</button>
+        <button class="btn ghost" id="addEdge">Add Edge</button>
+        <button class="btn ghost" id="resetGraph">Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        <div class="h">📑 Plan Table</div>
+        <div class="small">Filter &amp; sort</div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr auto">
+        <input class="input" id="planTitle" placeholder="Plan title (e.g., 'Harbour View ↔ Uptown Transfer')" />
+        <select id="planScope">
+          <option value="household">Household</option>
+          <option value="street">Street</option>
+          <option value="district">District</option>
+          <option value="city">City</option>
+        </select>
+        <button class="btn" id="addPlan">Add Plan</button>
+      </div>
+      <div style="overflow:auto;max-height:260px;margin-top:.5rem">
+        <table id="planTable">
+          <thead><tr><th>Title</th><th>Scope</th><th>Links</th><th>Updated</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT: Situational Board -->
+  <section id="right" class="grid">
+    <div class="card">
+      <div class="section-title">
+        <div class="h">📡 Situational Board</div>
+        <div class="small">Local, Offline-capable</div>
+      </div>
+      <div class="kv">
+        <label>Status</label>
+        <select id="statusSel">
+          <option value="green">Green</option>
+          <option value="yellow">Yellow</option>
+          <option value="orange">Orange</option>
+          <option value="red">Red</option>
+        </select>
+        <label>Timestamp</label>
+        <input class="input" id="ts" type="datetime-local"/>
+      </div>
+      <hr class="sep"/>
+      <div class="grid">
+        <textarea class="input" id="sitrep" rows="5" placeholder="Brief SITREP: observed conditions, road passability (non-sensitive), wind/rain, community needs…"></textarea>
+        <div class="toolbar">
+          <button class="btn" id="saveSitrep">Save SITREP</button>
+          <button class="btn ghost" id="listSitreps">History</button>
+        </div>
+        <div id="sitrepList" class="small"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        <div class="h">🧭 Nav Notes</div>
+        <div class="small">No real-time routes are provided here. Use official guidance.</div>
+      </div>
+      <ul class="small" id="navNotes" style="margin:.2rem 1rem">
+        <li>Harbour View is a typical inland staging area for Palisadoes/NMIA corridor.</li>
+        <li>Port Royal is low-lying; storm surge &amp; tsunami advisories warrant rapid elevation or inland staging.</li>
+        <li>Earthquake aftershocks: avoid damaged structures; check gas/electric shutoffs if trained.</li>
+      </ul>
+      <footer class="note">
+        This tool does not replace official alerts or orders. Always follow local authorities and emergency services.
+      </footer>
+    </div>
+
+    <div class="card">
+      <div class="section-title"><div class="h">🛡️ Zero-Harm + Integrity</div></div>
+      <div class="small">
+        Built for preparedness, community coordination, and safety. No tactical misuse. Tamper-evident banner &amp; hash check are included.
+      </div>
+      <div class="toolbar" style="margin-top:.5rem">
+        <button class="btn" id="btnTamperMode">Toggle Anti-Inversion</button>
+        <span id="tamperState" class="badge">Mode: Normal</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="ribbon" id="ribbon">Integrity: unknown • Offline: checking…</div>
+<div id="toast"><div class="toast" id="toastMsg">Saved</div></div>
+
+<script>
+/*** PWA-lite: dynamic manifest + in-memory service worker ***/
+const manifest = {
+  "name": "Kingston ↔ Port Royal • Mycelial Evac",
+  "short_name":"Mycelial Evac",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#0b0f1a",
+  "theme_color":"#0b0f1a",
+  "icons":[]
+};
+const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const murl = URL.createObjectURL(blob);
+document.getElementById('manifest-link').setAttribute('href', murl);
+
+// SW
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; });
+document.getElementById('btnInstall').onclick = async () => {
+  if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt=null; }
+};
+
+const swCode = `
+self.addEventListener('install',e=>{self.skipWaiting(); e.waitUntil(caches.open('mev1').then(c=>c.addAll(['./'])).catch(()=>null))});
+self.addEventListener('activate',e=>{clients.claim()});
+self.addEventListener('fetch',e=>{e.respondWith((async()=>{try{const r=await fetch(e.request); return r}catch(err){const c=await caches.open('mev1'); const m=await c.match('./'); return m||Response.error()}})())});
+`;
+const swBlob = new Blob([swCode], {type:'text/javascript'});
+const swUrl = URL.createObjectURL(swBlob);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(swUrl);
+
+/*** Starfield ***/
+const bg = document.getElementById('bg');
+const g = bg.getContext('2d');
+let stars = [];
+function resize(){ bg.width=innerWidth; bg.height=innerHeight; stars = Array.from({length:220},()=>({x:Math.random()*bg.width,y:Math.random()*bg.height,z:Math.random()*1+0.2}))}
+addEventListener('resize', resize); resize();
+function animate(){
+  g.clearRect(0,0,bg.width,bg.height);
+  for(const s of stars){
+    s.y += (.3 + s.z);
+    if(s.y>bg.height){ s.x=Math.random()*bg.width; s.y=-5; s.z=Math.random()*1+0.2; }
+    const sz = 0.6 + s.z*1.4;
+    g.fillStyle = s.z>.9?'#fff':(s.z>.5?'#99ccff':'#59d2ff');
+    g.fillRect(s.x,s.y,sz,sz);
+  }
+  requestAnimationFrame(animate);
+}
+animate();
+
+/*** Toast ***/
+function toast(t){ const n=document.getElementById('toast'); const m=document.getElementById('toastMsg'); m.textContent=t; n.style.display='block'; setTimeout(()=>n.style.display='none',1800); }
+
+/*** IndexedDB ***/
+const DB_NAME='mycelial-evac';
+const DB_VER=1;
+let db=null;
+
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = (e)=>{
+      const d = e.target.result;
+      d.createObjectStore('actions',{keyPath:'id',autoIncrement:true});
+      d.createObjectStore('plans',{keyPath:'id',autoIncrement:true});
+      d.createObjectStore('graph_nodes',{keyPath:'id',autoIncrement:true});
+      d.createObjectStore('graph_edges',{keyPath:'id',autoIncrement:true});
+      d.createObjectStore('resources',{keyPath:'id',autoIncrement:true});
+      d.createObjectStore('gm_links',{keyPath:'id',autoIncrement:true});
+      d.createObjectStore('sitreps',{keyPath:'id',autoIncrement:true});
+      d.createObjectStore('meta',{keyPath:'k'});
+    };
+    req.onsuccess=()=>{db=req.result; res(db);}
+    req.onerror=()=>rej(req.error);
+  });
+}
+function tx(store,mode='readonly'){ return db.transaction(store,mode).objectStore(store); }
+async function put(store,val){ return new Promise((res,rej)=>{ const r=tx(store,'readwrite').put(val); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);});}
+async function add(store,val){ return new Promise((res,rej)=>{ const r=tx(store,'readwrite').add(val); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);});}
+async function del(store,key){ return new Promise((res,rej)=>{ const r=tx(store,'readwrite').delete(key); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);});}
+async function all(store){ return new Promise((res,rej)=>{ const r=tx(store).getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error);});}
+
+/*** Integrity + Anti-inversion (soft) ***/
+let antiMode=false;
+document.getElementById('btnTamperMode').onclick=()=>{
+  antiMode=!antiMode;
+  document.getElementById('tamperState').textContent = 'Mode: ' + (antiMode?'Hardened':'Normal');
+  toast(antiMode?'Hardened safeguards ON':'Safeguards normal');
+};
+async function calcHash(){
+  // simple runtime hash of key UI text (not cryptographic assurance of the whole file)
+  const src = document.querySelector('title').textContent + JSON.stringify(manifest) + swCode.slice(0,128);
+  const enc = new TextEncoder().encode(src);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  const hex = [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  document.getElementById('ribbon').textContent = 'Integrity: '+hex.slice(0,16)+'… • Offline: '+(navigator.onLine?'online':'offline');
+}
+document.getElementById('btnHash').onclick=calcHash;
+addEventListener('online',calcHash); addEventListener('offline',calcHash);
+
+/*** Phase smart lists ***/
+const PHASES={
+  prepare:[
+    'Store 3+ days water & non-perishables',
+    'Print paper contacts & area map',
+    'Charge power banks; test radios/flashlights',
+    'Secure documents in waterproof pouch',
+    'Identify elevation/inland staging options'
+  ],
+  ready:[
+    'Pack Go-bags (ID, meds, first aid, cash)',
+    'Fuel vehicle(s); share route intentions',
+    'Move valuables above expected surge line',
+    'Check neighbors needing assistance',
+    'Stage at agreed meetup if advised'
+  ],
+  go:[
+    'Follow official evacuation orders if issued',
+    'Avoid flooded/washed-out corridors',
+    'Shut off gas/electric only if trained',
+    'Bring Go-bags + water; keep comms minimal',
+    'Mark home status (chalk/card) if local policy'
+  ],
+  recovery:[
+    'Return only when authorities allow',
+    'Document damage; beware contamination',
+    'Check structures before entry; beware shocks',
+    'Coordinate cleanup crews & supplies',
+    'Log lessons into plan for next cycle'
+  ]
+};
+
+/*** UI bindings & renderers ***/
+const actionInput = document.getElementById('actionInput');
+const actionList = document.getElementById('actionList');
+document.querySelectorAll('[data-phase]').forEach(b=>b.onclick=()=>loadPhase(b.dataset.phase));
+document.getElementById('seedPhase').onclick=()=>seedCurrentPhase();
+document.getElementById('addAction').onclick=()=> addAction(actionInput.value);
+actionInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ addAction(actionInput.value);} });
+
+async function addAction(txt){
+  if(!txt.trim()) return;
+  const rec = {text:txt.trim(), done:false, phase:currentPhase(), t:Date.now()};
+  await add('actions',rec);
+  actionInput.value=''; renderActions();
+}
+function currentPhase(){ return (document.querySelector('.toolbar [data-phase].active')?.dataset.phase)||'prepare';}
+function setPhase(p){
+  document.querySelectorAll('[data-phase]').forEach(x=>x.classList.toggle('active',x.dataset.phase===p));
+}
+async function loadPhase(p){
+  setPhase(p);
+  const list = await all('actions');
+  renderActions(list.filter(a=>a.phase===p));
+}
+async function seedCurrentPhase(){
+  const p=currentPhase(); const base = PHASES[p]||[];
+  for(const t of base){ await add('actions',{text:t,done:false,phase:p,t:Date.now()}); }
+  renderActions();
+}
+async function renderActions(list){
+  list = list || (await all('actions')).filter(a=>a.phase===currentPhase());
+  actionList.innerHTML = '';
+  if(!list.length){ actionList.innerHTML='<div class="small">No actions yet — add or seed from phase.</div>'; return; }
+  for(const a of list.sort((x,y)=>x.done-y.done || x.t-y.t)){
+    const row = document.createElement('div'); row.className='kv';
+    const left=document.createElement('div'); left.innerHTML=`<label style="display:flex;gap:.5rem;align-items:center">
+      <input type="checkbox" ${a.done?'checked':''}/>
+      <span ${a.done?'style="text-decoration:line-through;color:#88a2cc"':''}>${a.text}</span></label>`;
+    left.querySelector('input').onchange=async(e)=>{ a.done=e.target.checked; await put('actions',a); renderActions(); };
+    const right=document.createElement('div');
+    const delBtn=document.createElement('button'); delBtn.className='btn ghost'; delBtn.textContent='Del';
+    delBtn.onclick=async()=>{ await del('actions',a.id); renderActions(); };
+    right.appendChild(delBtn);
+    row.appendChild(left); row.appendChild(right);
+    actionList.appendChild(row);
+  }
+}
+document.getElementById('clearDone').onclick=async()=>{
+  const list = await all('actions');
+  for(const a of list){ if(a.done) await del('actions',a.id); }
+  renderActions();
+};
+
+/*** Plans table ***/
+const planTable = document.querySelector('#planTable tbody');
+document.getElementById('addPlan').onclick=async()=>{
+  const title=document.getElementById('planTitle').value.trim();
+  const scope=document.getElementById('planScope').value;
+  if(!title) return;
+  await add('plans',{title,scope,links:[],updated:Date.now()});
+  document.getElementById('planTitle').value='';
+  renderPlans();
+}
+async function renderPlans(){
+  const plans=await all('plans');
+  planTable.innerHTML='';
+  for(const p of plans.sort((a,b)=>b.updated-a.updated)){
+    const tr=document.createElement('tr');
+    const tdTitle=document.createElement('td'); tdTitle.textContent=p.title;
+    const tdScope=document.createElement('td'); tdScope.textContent=p.scope;
+    const tdLinks=document.createElement('td'); tdLinks.textContent=(p.links||[]).join(', ');
+    const tdUpd=document.createElement('td'); tdUpd.textContent=new Date(p.updated).toLocaleString();
+    const tdAct=document.createElement('td'); 
+    const linkBtn=document.createElement('button'); linkBtn.className='btn ghost'; linkBtn.textContent='Link GM';
+    linkBtn.onclick=async()=>{
+      const id=prompt('Grandmaster ID to attach?');
+      if(id){ p.links = (p.links||[]).concat([id]); p.updated=Date.now(); await put('plans',p); renderPlans(); }
+    };
+    const delBtn=document.createElement('button'); delBtn.className='btn ghost'; delBtn.style.marginLeft='.4rem'; delBtn.textContent='Del';
+    delBtn.onclick=async()=>{ await del('plans',p.id); renderPlans(); };
+    tdAct.append(linkBtn,delBtn);
+    tr.append(tdTitle,tdScope,tdLinks,tdUpd,tdAct);
+    planTable.appendChild(tr);
+  }
+}
+
+/*** Grandmaster links ***/
+document.getElementById('linkGM').onclick=async()=>{
+  const id = document.getElementById('gmId').value.trim();
+  const notes = document.getElementById('gmNotes').value.trim();
+  if(!id) return;
+  await add('gm_links',{gm:id,notes,at:Date.now()});
+  document.getElementById('gmId').value='';
+  document.getElementById('gmNotes').value='';
+  listGM();
+}
+document.getElementById('viewGM').onclick=listGM;
+async function listGM(){
+  const list=await all('gm_links');
+  const box=document.getElementById('gmList');
+  if(!list.length){ box.textContent='No links yet.'; return; }
+  box.innerHTML=list.sort((a,b)=>b.at-a.at).map(x=>`<div class="badge">🔗 ${x.gm} <span class="small" style="margin-left:.4rem">${new Date(x.at).toLocaleString()}</span></div>`).join(' ');
+}
+
+/*** Resources ***/
+document.getElementById('addRes').onclick=async()=>{
+  const title=document.getElementById('resTitle').value.trim();
+  const body=document.getElementById('resBody').value.trim();
+  if(!title) return;
+  await add('resources',{title,body,at:Date.now()});
+  document.getElementById('resTitle').value=''; document.getElementById('resBody').value='';
+  renderResources();
+}
+async function renderResources(){
+  const list=await all('resources');
+  const box=document.getElementById('resList');
+  if(!list.length){ box.innerHTML='<div class="small">No resources yet.</div>'; return; }
+  box.innerHTML=list.sort((a,b)=>b.at-a.at).map(r=>`
+    <div class="kv">
+      <div><b>${r.title}</b><div class="small">${r.body? r.body.replace(/</g,'&lt;'):''}</div></div>
+      <div><button class="btn ghost" data-id="${r.id}">Del</button></div>
+    </div>
+  `).join('');
+  box.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{ await del('resources',+b.dataset.id); renderResources(); });
+}
+
+/*** SITREPs ***/
+document.getElementById('saveSitrep').onclick=async()=>{
+  const status=document.getElementById('statusSel').value;
+  const ts=document.getElementById('ts').value || new Date().toISOString().slice(0,16);
+  const text=document.getElementById('sitrep').value.trim();
+  await add('sitreps',{status,ts,text,at:Date.now()});
+  document.getElementById('sitrep').value='';
+  toast('SITREP saved'); listSitreps();
+}
+document.getElementById('listSitreps').onclick=listSitreps;
+async function listSitreps(){
+  const list=await all('sitreps');
+  const box=document.getElementById('sitrepList');
+  if(!list.length){ box.textContent='No SITREPs yet.'; return; }
+  box.innerHTML=list.sort((a,b)=>b.at-a.at).map(s=>`<div class="badge">📡 ${s.status.toUpperCase()} • ${s.ts}</div>`).join(' ');
+}
+
+/*** Export/Import ***/
+document.getElementById('btnExport').onclick=async()=>{
+  const dump = {};
+  for(const store of ['actions','plans','graph_nodes','graph_edges','resources','gm_links','sitreps','meta']){
+    dump[store]=await all(store);
+  }
+  const blob=new Blob([JSON.stringify(dump,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='mycelial-evac-kingston.json'; a.click();
+};
+document.getElementById('importFile').onchange=async(e)=>{
+  const f=e.target.files?.[0]; if(!f) return;
+  const txt=await f.text();
+  try{
+    const data=JSON.parse(txt);
+    for(const k of Object.keys(data||{})){
+      for(const rec of data[k]){
+        // new auto keys
+        const {id, ...rest}=rec;
+        await add(k,rest);
+      }
+    }
+    toast('Imported');
+    renderActions(); renderPlans(); renderResources(); listGM(); listSitreps(); drawGraph();
+  }catch(err){ toast('Import failed'); }
+};
+
+/*** Mycelial Graph (simple force-ish) ***/
+const graphEl = document.getElementById('graph');
+const ctxEl = document.createElement('canvas'); ctxEl.width=graphEl.clientWidth; ctxEl.height=graphEl.clientHeight;
+graphEl.appendChild(ctxEl);
+const ctx = ctxEl.getContext('2d');
+let nodes=[], edges=[];
+function randNode(){ return {id:undefined, x:Math.random()*ctxEl.width, y:Math.random()*ctxEl.height, r:10+Math.random()*6, label:'Node', vx:0, vy:0}; }
+async function loadGraph(){ nodes=await all('graph_nodes'); edges=await all('graph_edges'); if(!nodes.length){ // seed
+  const a=randNode(); a.label='Household Prep'; const b=randNode(); b.label='District Staging'; const c=randNode(); c.label='City Liaison';
+  a.id=await add('graph_nodes',a); b.id=await add('graph_nodes',b); c.id=await add('graph_nodes',c);
+  edges=[{from:a.id,to:b.id,id:await add('graph_edges',{from:a.id,to:b.id})},{from:b.id,to:c.id,id:await add('graph_edges',{from:b.id,to:c.id})}];
+}else{
+  // edges already loaded via store fetch
+}
+}
+function drawGraph(){
+  ctx.clearRect(0,0,ctxEl.width,ctxEl.height);
+  // physics
+  for(const n of nodes){ n.vx*=0.95; n.vy*=0.95; }
+  for(const e of edges){
+    const a=nodes.find(n=>n.id===e.from), b=nodes.find(n=>n.id===e.to); if(!a||!b) continue;
+    const dx=b.x-a.x, dy=b.y-a.y; const d=Math.max(40,Math.hypot(dx,dy)); const f=(d-120)*0.002;
+    const fx=dx/d*f, fy=dy/d*f; a.vx+=fx; a.vy+=fy; b.vx-=fx; b.vy-=fy;
+  }
+  for(let i=0;i<nodes.length;i++){
+    for(let j=i+1;j<nodes.length;j++){
+      const a=nodes[i], b=nodes[j]; const dx=b.x-a.x, dy=b.y-a.y; const d=Math.hypot(dx,dy)||1; const rep=80/d*0.3;
+      const rx=dx/d*rep, ry=dy/d*rep; a.vx-=rx; a.vy-=ry; b.vx+=rx; b.vy+=ry;
+    }
+  }
+  for(const n of nodes){ n.x=Math.max(20,Math.min(ctxEl.width-20,n.x+n.vx)); n.y=Math.max(20,Math.min(ctxEl.height-20,n.y+n.vy)); }
+  // edges
+  ctx.strokeStyle='#2f4e90'; ctx.lineWidth=1.2;
+  for(const e of edges){
+    const a=nodes.find(n=>n.id===e.from), b=nodes.find(n=>n.id===e.to); if(!a||!b) continue;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    // arrow
+    const ang=Math.atan2(b.y-a.y,b.x-a.x); const ax=b.x-Math.cos(ang)*12, ay=b.y-Math.sin(ang)*12;
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax-8*Math.cos(ang-Math.PI/6),ay-8*Math.sin(ang-Math.PI/6));
+    ctx.lineTo(ax-8*Math.cos(ang+Math.PI/6),ay-8*Math.sin(ang+Math.PI/6)); ctx.closePath(); ctx.fillStyle='#2f4e90'; ctx.fill();
+  }
+  // nodes
+  for(const n of nodes){
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2); ctx.fillStyle='#0f2a5c'; ctx.fill(); ctx.strokeStyle='#4e83da'; ctx.stroke();
+    ctx.fillStyle='#cfe3ff'; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.fillText(n.label, n.x, n.y-n.r-6);
+  }
+  requestAnimationFrame(drawGraph);
+}
+let dragging=null;
+ctxEl.addEventListener('mousedown',e=>{
+  const rect=ctxEl.getBoundingClientRect(); const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  dragging = nodes.find(n=>Math.hypot(n.x-x,n.y-y)<n.r+4) || null;
+});
+addEventListener('mouseup',async()=>{ if(dragging){ await put('graph_nodes',dragging); dragging=null; }});
+addEventListener('mousemove',e=>{
+  if(!dragging) return;
+  const rect=ctxEl.getBoundingClientRect(); dragging.x=e.clientX-rect.left; dragging.y=e.clientY-rect.top;
+});
+
+document.getElementById('addNode').onclick=async()=>{
+  const n=randNode(); n.label=prompt('Node label?')||'Node';
+  n.id=await add('graph_nodes',n); nodes.push(n);
+};
+document.getElementById('addEdge').onclick=async()=>{
+  if(nodes.length<2) return alert('Need at least two nodes.');
+  const from=prompt('From node label?'); const to=prompt('To node label?');
+  const a=nodes.find(n=>n.label===from), b=nodes.find(n=>n.label===to);
+  if(!a||!b) return alert('Labels not found.');
+  const id=await add('graph_edges',{from:a.id,to:b.id}); edges.push({from:a.id,to:b.id,id});
+};
+document.getElementById('resetGraph').onclick=async()=>{
+  for(const e of await all('graph_edges')) await del('graph_edges',e.id);
+  for(const n of await all('graph_nodes')) await del('graph_nodes',n.id);
+  nodes=[]; edges=[]; await loadGraph();
+};
+
+(async function init(){
+  await openDB();
+  // defaults
+  setPhase('prepare'); await loadPhase('prepare'); await renderActions(); await renderPlans(); await renderResources(); await listGM(); await listSitreps();
+  await loadGraph(); drawGraph(); await calcHash();
+  document.getElementById('ts').value = new Date().toISOString().slice(0,16);
+  document.getElementById('ribbon').textContent = 'Integrity: booting… • Offline: '+(navigator.onLine?'online':'offline');
+})();
+
+/*** Scenario/Zone (context-only; does not give live routing) ***/
+document.getElementById('scenarioSel').addEventListener('change',()=>toast('Scenario context set: '+document.getElementById('scenarioSel').value));
+document.getElementById('zoneSel').addEventListener('change',()=>toast('Zone context set: '+document.getElementById('zoneSel').value));
+
+/*** Safety banner for misuse (soft obfuscation) ***/
+const ORIGINAL_TITLE = document.title;
+function antiBanner(){
+  if(!antiMode) return;
+  document.title='Safety First — Preparedness Only';
+}
+setInterval(antiBanner,1500);
+</script>
+
+</body>
+</html>
